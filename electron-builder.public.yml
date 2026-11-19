@@ -1,0 +1,61 @@
+# electron-builder.public.yml - 公开版：不内置任何 Key，用户自行配置
+# appId 必须与 main.js 里的 app.setAppUserModelId('com.companion.ball') 保持一致
+appId: com.companion.ball
+productName: companion-ball
+# 公开版与内置 Key 版打同一个 Release，资产名必须能区分（产品页下载按钮依赖这个名字）
+artifactName: companion-ball-public.Setup.${version}.${ext}
+copyright: Copyright © 2026 CQL111
+directories:
+  output: out-public
+files:
+  - main.js
+  - preload.js
+  - package.json
+  - src/**/*
+  - docs/legal/**/*
+  - "!**/.env"
+  - "!**/.env.*"
+  - "!**/build/**"
+  - "!**/build-out/**"
+  - "!**/out*/**"
+  - "!**/release/**"
+  - "!**/scripts/**"
+  - "!**/smoke-test.js"
+  - "!**/product-intro.html"
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: src/assets/app-icon-1024.png
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 桌面陪伴
+  license: docs/legal/user-agreement.md
+mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  icon: src/assets/app-icon-1024.png
+  category: public.app-category.entertainment
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+dmg:
+  title: 桌面陪伴 ${version}
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+publish:
+  provider: github
+  owner: CQL111
+  repo: companion-ball
+  releaseType: release

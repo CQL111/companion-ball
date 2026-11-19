@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://api.deepseek.com;">
+  <title>设置</title>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/settings.css">
+</head>
+<body>
+  <div class="settings">
+    <h1>设置</h1>
+
+    <div id="llm-status" class="llm-status">检测中…</div>
+
+    <section class="section">
+      <h2>线上模型</h2>
+      <p class="hint">填写后优先生效（优先级：设置面板 &gt; 本机 <code>.env</code> &gt; 应用内置 Key）。开发者本机可用 <code>.env</code>；发布版可内置 Key，用户也可随时换成自己的。Key 只存在这台电脑，不会进 git，已保存的不必重填。</p>
+
+      <label>
+        <span>Base URL</span>
+        <input id="online-base-url" type="text" placeholder="https://api.deepseek.com/v1" autocomplete="off">
+      </label>
+      <label>
+        <span>模型名</span>
+        <input id="online-model" type="text" placeholder="deepseek-chat" autocomplete="off">
+      </label>
+      <label>
+        <span>API Key</span>
+        <input id="online-token" type="password" placeholder="留空表示不修改已保存的 Key" autocomplete="off">
+        <small id="online-token-hint"></small>
+      </label>
+      <div class="row">
+        <button id="online-save" class="btn primary">保存线上配置</button>
+        <button id="online-test" class="btn">测试连接</button>
+        <button id="online-clear" class="btn ghost">清除已存 Key</button>
+      </div>
+      <div id="online-status" class="status"></div>
+    </section>
+
+    <section class="section">
+      <h2>本地模型</h2>
+      <p class="hint">本机已装 Ollama 时可改用本地模型；选空则继续用上面的线上配置。</p>
+
+      <label>
+        <span>当前本地模型</span>
+        <select id="local-model-select">
+          <option value="">（使用线上 DeepSeek）</option>
+        </select>
+        <small id="local-model-hint">检测 Ollama 已安装模型…</small>
+      </label>
+
+      <div class="row">
+        <button id="refresh" class="btn">刷新列表</button>
+        <button id="use-online" class="btn ghost">使用线上</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>下载本地模型</h2>
+      <p class="hint">输入模型名（如 <code>qwen2.5:7b</code>、<code>llama3</code>），从 Ollama 下载到本机。</p>
+
+      <div class="row">
+        <input id="pull-name" type="text" placeholder="qwen2.5:7b" autocomplete="off">
+        <button id="pull" class="btn primary">下载</button>
+      </div>
+      <div id="pull-status" class="status"></div>
+    </section>
+
+    <section class="section">
+      <h2>桌面形象</h2>
+      <p class="hint">选择桌角常驻的形象。</p>
+      <label>
+        <span>形象</span>
+        <select id="persona-select">
+          <option value="cat">猫</option>
+          <option value="dog">狗</option>
+          <option value="caishen">财神</option>
+          <option value="lots">签筒</option>
+        </select>
+        <small id="persona-hint">切换后立即生效</small>
+      </label>
+    </section>
+
+    <section class="section">
+      <h2>动画</h2>
+      <p class="hint">角色互动时播放轻量动画。系统开启「减少动态效果」时会自动跳过。</p>
+
+      <label class="switch-row">
+        <input id="anim-toggle" type="checkbox">
+        <span class="switch-track"><i></i></span>
+        <span class="switch-label">播放角色动画</span>
+      </label>
+
+      <div class="row">
+        <button id="anim-preview" class="btn">▶ 预览动画</button>
+        <small id="anim-state" class="inline-hint"></small>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>关于</h2>
+      <p class="hint">桌面陪伴 · 团子猫 · 本应用核心功能离线可用，AI 为可选增强。</p>
+      <div class="row legal-row">
+        <button class="btn legal-btn" data-legal="privacy">隐私政策</button>
+        <button class="btn legal-btn" data-legal="terms">用户协议</button>
+        <button class="btn legal-btn" data-legal="disclaimer">免责声明</button>
+        <button class="btn legal-btn" data-legal="thirdparty">第三方许可</button>
+      </div>
+      <p class="hint legal-note">运势、黄历、签文与 AI 解读均为传统文化娱乐用途，不构成医疗、法律或投资建议。</p>
+    </section>
+  </div>
+  <script src="js/rendererLogger.js"></script>
+  <script src="legal-data.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+</html>
