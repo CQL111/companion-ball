@@ -292,7 +292,7 @@ export function createConsentWindow(): BrowserWindow {
   return win
 }
 
-export const AGREEMENT_VERSION = 2
+export const AGREEMENT_VERSION = 3
 
 export function needsConsent(): boolean {
   return Number(store.get('consentVersion') || 0) < AGREEMENT_VERSION

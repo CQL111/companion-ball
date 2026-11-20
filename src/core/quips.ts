@@ -18,6 +18,7 @@ export type QuipBucket =
   | 'drag'
   | 'pat'
   | 'grumble'
+  | 'return'
 
 export interface QuipDatabase {
   version: number
@@ -59,6 +60,7 @@ export function pickBucket(
   if (trigger === 'morning') return 'morning'
   if (trigger === 'annoyed') return 'annoyed'
   if (trigger === 'dizzy') return 'dizzy'
+  if (trigger === 'return') return 'return'
   const hour = new Date(now).getHours()
   if (hour < 6) return 'night'
   if (trigger === 'wake') return 'wake'
@@ -118,7 +120,7 @@ export function validateQuipDatabase(db: unknown): string[] {
   const errors: string[] = []
   if (!db || typeof db !== 'object') return ['台词库不是对象']
   const d = db as Partial<QuipDatabase>
-  for (const key of ['tap', 'wake', 'morning', 'annoyed', 'dizzy', 'night', 'drag', 'pat', 'grumble'] as const) {
+  for (const key of ['tap', 'wake', 'morning', 'annoyed', 'dizzy', 'night', 'drag', 'pat', 'grumble', 'return'] as const) {
     const list = d.lines?.[key]
     if (!Array.isArray(list) || list.length === 0) errors.push(`lines.${key} 为空`)
     else if (list.some((l) => typeof l !== 'string' || !l.trim())) errors.push(`lines.${key} 含空台词`)
@@ -136,4 +138,5 @@ export const MOOD_BUCKETS: Record<PetMood, QuipBucket[]> = {
   sleep: ['night'],
   annoyed: ['annoyed'],
   dizzy: ['dizzy'],
+  sulk: ['return'],
 }

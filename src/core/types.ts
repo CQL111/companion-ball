@@ -74,6 +74,10 @@ export interface StoreShape {
   animations: boolean
   /** 轻合成音效开关（v0.5.0） */
   sound: boolean
+  /** 久坐提醒开关（S4，默认开） */
+  sitReminder: boolean
+  /** 天气氛围（S4，默认关闭；只存城市与经纬度） */
+  weather: { enabled: boolean; place: { city: string; label: string; latitude: number; longitude: number } | null }
   pet: PetSettings
   /** 长期记忆（S2）；只在本地，上限见 core/memory.ts */
   memories: Memory[]

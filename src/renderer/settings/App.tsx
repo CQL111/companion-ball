@@ -29,6 +29,12 @@ export default function App(): React.ReactElement {
   const [pullStatus, setPullStatus] = useState<StatusMsg>({ type: '', text: '' })
   const [animations, setAnimations] = useState(true)
   const [sound, setSound] = useState(true)
+  const [sitReminder, setSitReminder] = useState(true)
+  const [weatherCity, setWeatherCity] = useState('')
+  const [weatherPlace, setWeatherPlace] = useState<{ city: string; label: string; latitude: number; longitude: number } | null>(null)
+  const [weatherEnabled, setWeatherEnabled] = useState(false)
+  const [weatherBusy, setWeatherBusy] = useState(false)
+  const [weatherLabel, setWeatherLabel] = useState('')
   const [petName, setPetName] = useState('')
   const [nameSaved, setNameSaved] = useState('')
   const [mem, setMem] = useState<MemoryListResult | null>(null)
@@ -85,6 +91,21 @@ export default function App(): React.ReactElement {
         setSound(snd !== false)
       } catch {
         setSound(true)
+      }
+      try {
+        const w = await window.api.weatherStatus()
+        setWeatherEnabled(w.enabled)
+        setWeatherPlace(w.place)
+        setWeatherCity(w.place?.city || '')
+        setWeatherLabel(w.place?.label || '')
+      } catch {
+        setWeatherEnabled(false)
+      }
+      try {
+        const st = await window.api.getConfig('sitReminder')
+        setSitReminder(st !== false)
+      } catch {
+        setSitReminder(true)
       }
       try {
         const pet = await window.api.getConfig('pet')
@@ -218,6 +239,44 @@ export default function App(): React.ReactElement {
       await window.api.saveConfig('sound', enabled)
     } catch {
       setSound(!enabled)
+    }
+  }
+
+  const toggleSit = async (enabled: boolean): Promise<void> => {
+    setSitReminder(enabled)
+    try {
+      await window.api.saveConfig('sitReminder', enabled)
+    } catch {
+      setSitReminder(!enabled)
+    }
+  }
+
+  const lookupWeather = async (): Promise<void> => {
+    const city = weatherCity.trim()
+    if (!city) return
+    setWeatherBusy(true)
+    try {
+      const r = await window.api.weatherLookup(city)
+      if (r.ok && r.place) {
+        setWeatherPlace(r.place)
+        setWeatherLabel(r.place.label)
+      } else {
+        setWeatherPlace(null)
+        setWeatherLabel('没找到这个城市，换个写法试试')
+        setWeatherEnabled(false)
+      }
+    } finally {
+      setWeatherBusy(false)
+    }
+  }
+
+  const toggleWeather = async (enabled: boolean): Promise<void> => {
+    setWeatherEnabled(enabled)
+    try {
+      const view = await window.api.weatherSet({ enabled, place: weatherPlace })
+      setWeatherEnabled(view.enabled)
+    } catch {
+      setWeatherEnabled(!enabled)
     }
   }
 
@@ -526,6 +585,52 @@ export default function App(): React.ReactElement {
           <button className="btn" onClick={() => void previewAnim()} disabled={previewing}>▶ 预览动画</button>
           <small className={`inline-hint${animHint.includes('系统') ? ' warn' : ''}`}>{animHint}</small>
         </div>
+      </section>
+
+      <section className="section">
+        <h2>天气氛围</h2>
+        <p className="hint">
+          开启后它会知道外面在下雨还是下雪，偶尔说一句。**默认关闭**；
+          只发送你填写的城市经纬度（不含任何设备或用户信息），天气数据来自 Open-Meteo（免费、无需账号）。
+        </p>
+        <div className="row">
+          <input
+            type="text"
+            value={weatherCity}
+            placeholder="城市名，例如 杭州"
+            onChange={(e) => setWeatherCity(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void lookupWeather()
+            }}
+          />
+          <button className="btn" onClick={() => void lookupWeather()} disabled={weatherBusy}>
+            查找
+          </button>
+        </div>
+        {weatherLabel && <small>已定位：{weatherLabel}</small>}
+        <label className="switch-row">
+          <input
+            type="checkbox"
+            checked={weatherEnabled}
+            onChange={(e) => void toggleWeather(e.target.checked)}
+            disabled={!weatherPlace}
+          />
+          <span className="switch-track"><i /></span>
+          <span className="switch-label">让猫知道天气</span>
+        </label>
+      </section>
+
+      <section className="section">
+        <h2>久坐提醒</h2>
+        <p className="hint">
+          连续坐在电脑前满 50 分钟，它会提醒你起来动动，每天最多 3 次。
+          它只知道「系统多久没输入」，不读你在做什么。
+        </p>
+        <label className="switch-row">
+          <input type="checkbox" checked={sitReminder} onChange={(e) => void toggleSit(e.target.checked)} />
+          <span className="switch-track"><i /></span>
+          <span className="switch-label">开启久坐提醒</span>
+        </label>
       </section>
 
       <section className="section">

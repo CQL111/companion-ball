@@ -15,9 +15,10 @@ export type PetMood =
   | 'sleep' // 睡着
   | 'annoyed' // 被连点烦到
   | 'dizzy' // 被甩晕
+  | 'sulk' // 你离开很久，它有点闷（不是生气，是等你）
 
 /** 触发类型：决定用哪组台词，也方便平台层做额外反馈（音效/动画） */
-export type PetTrigger = 'tap' | 'wake' | 'morning' | 'annoyed' | 'dizzy'
+export type PetTrigger = 'tap' | 'wake' | 'morning' | 'annoyed' | 'dizzy' | 'return'
 
 export interface PetState {
   mood: PetMood
@@ -39,6 +40,10 @@ export type PetEvent =
   | { type: 'click'; now: number }
   | { type: 'drag-start'; now: number }
   | { type: 'drag-end'; now: number; flung: boolean }
+  /** 系统报告用户离开了（空闲 / 锁屏超过阈值） */
+  | { type: 'away'; now: number; awayMs: number }
+  /** 用户回来了 */
+  | { type: 'returned'; now: number; awayMs: number }
 
 export interface PetStateOptions {
   /** 无交互多久进入打盹（默认 30 分钟） */
@@ -61,11 +66,15 @@ export const DEFAULT_OPTIONS: Required<PetStateOptions> = {
   morningHours: [6, 10],
 }
 
+/** 离开超过这个时长，回来时它先「闷」一下（不是生气） */
+export const SULK_AFTER_MS = 2 * 60 * 60 * 1000
+
 const HOLD_MS = {
   smile: 3000,
   curious: 3000,
   annoyed: 6000,
   dizzy: 1800,
+  sulk: 5000,
 }
 
 /** 本地日期键（YYYY-MM-DD），用于「每天只问候一次」 */
@@ -126,6 +135,45 @@ export function reducePetState(
 
   if (event.type === 'drag-start') {
     return { state: { ...state, dragging: true, mood: 'curious', hold: null, lastInteractAt: now } }
+  }
+
+  if (event.type === 'away') {
+    // 用户离开了：猫自己待着。离开很久会「闷」，但不是生气——它是在等你
+    const sulk = event.awayMs >= SULK_AFTER_MS
+    return {
+      state: {
+        ...state,
+        dragging: false,
+        lastInteractAt: now,
+        // 离开时它自己会睡着；回来时由 returned 事件负责唤醒
+        mood: sulk ? 'sulk' : 'doze',
+        hold: null,
+      },
+    }
+  }
+
+  if (event.type === 'returned') {
+    // 用户回来了：短时间离开 → 抬头看你；很久 → 先闷一下再亲近
+    if (event.awayMs >= SULK_AFTER_MS) {
+      return {
+        state: {
+          ...state,
+          lastInteractAt: now,
+          mood: 'sulk',
+          hold: { mood: 'sulk', until: now + HOLD_MS.sulk },
+        },
+        trigger: 'return',
+      }
+    }
+    return {
+      state: {
+        ...state,
+        lastInteractAt: now,
+        mood: 'curious',
+        hold: { mood: 'curious', until: now + HOLD_MS.curious },
+      },
+      trigger: 'return',
+    }
   }
 
   if (event.type === 'drag-end') {

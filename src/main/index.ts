@@ -17,6 +17,8 @@ import { startCursorPolling, stopCursorPolling } from './cursor'
 import { registerShortcut } from './shortcut'
 import { ensureDailyDiary } from './remember'
 import * as mail from './mail'
+import { startPresenceWatcher, stopPresenceWatcher } from './presenceWatcher'
+import { startWeatherWatcher, stopWeatherWatcher } from './weatherService'
 
 // Windows 通知必须先设 appId（在 ready 之前）
 app.setAppUserModelId('com.companion.ball')
@@ -70,6 +72,10 @@ app.whenReady().then(() => {
     setInterval(() => ensureDailyDiary(), 60 * 60 * 1000)
     // S3：猫自己出门巡游（开启许愿瓶后才有意义）
     startBottlePatrol()
+    // S4：读系统空闲状态（只在本地判断，不采集内容）
+    startPresenceWatcher()
+    // S4：天气氛围（默认关闭，开启后才轮询）
+    startWeatherWatcher()
     setTimeout(() => {
       runSelfCheck({
         logWatcher: getLogWatcher(),
@@ -145,4 +151,6 @@ app.on('will-quit', () => {
     /* ignore */
   }
   stopCursorPolling()
+  stopPresenceWatcher()
+  stopWeatherWatcher()
 })

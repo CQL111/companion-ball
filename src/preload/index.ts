@@ -76,6 +76,15 @@ const api: CompanionApi = {
   onAgentProgress: (handler) => subscribe(EV.agentProgress, handler),
   onConfigChanged: (handler) => subscribe(EV.configChanged, handler),
   onCursorMoved: (handler) => subscribe(EV.cursorMoved, handler),
+  onPresenceAway: (handler) => subscribe(EV.presenceAway, handler),
+  onPresenceBack: (handler) => subscribe(EV.presenceBack, handler),
+  onPresenceSit: (handler) => subscribe(EV.presenceSit, handler),
+  onWeatherChanged: (handler) => subscribe(EV.weatherChanged, handler),
+
+  // 天气氛围（S4）
+  weatherStatus: () => ipcRenderer.invoke(CH.weatherStatus),
+  weatherLookup: (city) => ipcRenderer.invoke(CH.weatherLookup, city),
+  weatherSet: (payload) => ipcRenderer.invoke(CH.weatherSet, payload),
 
   logInfo: (scope, msg, meta) => ipcRenderer.send(CH.logInfo, scope, msg, meta),
   logWarn: (scope, msg, meta) => ipcRenderer.send(CH.logWarn, scope, msg, meta),

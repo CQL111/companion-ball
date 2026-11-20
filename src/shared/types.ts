@@ -135,6 +135,20 @@ export interface BottleStatusView {
   dailyLimit: number
 }
 
+export interface WeatherStatusView {
+  /** 是否已开启且配置了城市 */
+  enabled: boolean
+  place: { city: string; label: string; latitude: number; longitude: number } | null
+  /** 当前天气（未开启时为 null） */
+  current: { kind: string; isDay: boolean } | null
+}
+
+export interface WeatherLookupResult {
+  ok: boolean
+  place?: { city: string; label: string; latitude: number; longitude: number }
+  error?: string
+}
+
 export interface MailApiResult<T> {
   ok: boolean
   data?: T
@@ -213,6 +227,16 @@ export interface CompanionApi {
   onConfigChanged(handler: (key: string, value: unknown) => void): () => void
   /** 主进程光标位置（窗口内坐标），用于让角色看向鼠标 */
   onCursorMoved(handler: (pos: { x: number; y: number }) => void): () => void
+  /** 用户离开 / 回来 / 久坐提醒（S4） */
+  onPresenceAway(handler: (p: { since: number }) => void): () => void
+  onPresenceBack(handler: (p: { awayMs: number }) => void): () => void
+  onPresenceSit(handler: (p: { text: string; count: number }) => void): () => void
+  onWeatherChanged(handler: (p: { kind: string; isDay: boolean; text: string }) => void): () => void
+
+  // 天气氛围（S4，默认关闭）
+  weatherStatus(): Promise<WeatherStatusView>
+  weatherLookup(city: string): Promise<WeatherLookupResult>
+  weatherSet(payload: { enabled: boolean; place?: { city: string; label: string; latitude: number; longitude: number } | null }): Promise<WeatherStatusView>
 
   logInfo(scope: string, msg: string, meta?: Record<string, unknown>): void
   logWarn(scope: string, msg: string, meta?: Record<string, unknown>): void

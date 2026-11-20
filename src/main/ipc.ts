@@ -12,6 +12,7 @@ import { handleAsk, resetChat } from './chat'
 import { extractMemories, bumpInteraction, ensureDailyDiary } from './remember'
 import * as mail from './mail'
 import { createMailWindow } from './mailWindow'
+import * as weather from './weatherService'
 import * as memory from '../core/memory'
 import * as notebook from '../core/notebook'
 import * as backup from '../core/backup'
@@ -42,6 +43,8 @@ import { PERSONAS, broadcastPersona, rebuildTrayMenu } from './tray'
 import { CH, EV } from '../shared/channels'
 import { configKeySchema, localModelSchema, memoryIdSchema, petNameSchema, rectSchema } from '../shared/ipc'
 import type { AiConfig, Persona } from '../shared/types'
+
+type WeatherStatusPlace = { city: string; label: string; latitude: number; longitude: number }
 
 // 包装 ipcMain.handle：打入口日志 + 异常兜底
 function handle<T>(channel: string, fn: (event: Electron.IpcMainInvokeEvent, ...args: any[]) => T | Promise<T>): void {
@@ -424,6 +427,39 @@ export function registerIpc(): void {
       return { ok: true, data: { alias: r.alias, body: r.body } }
     }
     return { ok: true, data: null, errorText: r.errorText }
+  })
+
+  // ---------- 天气氛围（S4，默认关闭） ----------
+  handle(CH.weatherStatus, () => {
+    const cfg = weather.weatherSettings()
+    const snap = weather.currentWeatherSnapshot()
+    return {
+      enabled: cfg.enabled,
+      place: cfg.place,
+      current: snap ? { kind: snap.kind, isDay: snap.isDay } : null,
+    }
+  })
+
+  handle(CH.weatherLookup, async (_e, city: unknown) => {
+    const place = await weather.lookupCity(String(city ?? ''))
+    return place ? { ok: true, place } : { ok: false, error: 'NOT_FOUND' }
+  })
+
+  handle(CH.weatherSet, (_e, payload: unknown) => {
+    const p = (payload && typeof payload === 'object' ? payload : {}) as {
+      enabled?: boolean
+      place?: WeatherStatusPlace | null
+    }
+    weather.setWeatherSettings({ enabled: p.enabled === true, place: p.place === undefined ? undefined : p.place })
+    weather.restartWeatherWatcher()
+    const cfg = weather.weatherSettings()
+    const snap = weather.currentWeatherSnapshot()
+    logger.info('weather.set', `enabled=${cfg.enabled}`)
+    return {
+      enabled: cfg.enabled,
+      place: cfg.place,
+      current: snap ? { kind: snap.kind, isDay: snap.isDay } : null,
+    }
   })
 
   handle(CH.openMail, () => {

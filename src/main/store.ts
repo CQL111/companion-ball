@@ -25,6 +25,8 @@ export const store = new Store<StoreShape>({
     consentVersion: 0,
     animations: true,
     sound: true,
+    sitReminder: true,
+    weather: { enabled: false, place: null },
     pet: { name: '', lastInteractAt: 0, lastGreetDate: '' },
     memories: [],
     notebook: { version: 1, entries: [] },

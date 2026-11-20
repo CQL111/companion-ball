@@ -50,6 +50,10 @@ export const CH = {
   openMail: 'open-mail',
   bottlePatrolNow: 'bottle-patrol-now',
   bottlePickedEvent: 'bottle-picked',
+  // 天气氛围（S4，默认关闭）
+  weatherStatus: 'weather-status',
+  weatherLookup: 'weather-lookup',
+  weatherSet: 'weather-set',
   logInfo: 'log-info',
   logWarn: 'log-warn',
   logError: 'log-error',
@@ -65,6 +69,13 @@ export const EV = {
   agentProgress: 'ai-agent-progress',
   configChanged: 'config-changed',
   cursorMoved: 'cursor-moved',
+  presenceAway: 'presence-away',
+  presenceBack: 'presence-back',
+  presenceSit: 'presence-sit',
+  weatherStatus: 'weather-status',
+  weatherLookup: 'weather-lookup',
+  weatherSet: 'weather-set',
+  weatherChanged: 'weather-changed',
 } as const
 
 export type Channel = (typeof CH)[keyof typeof CH]

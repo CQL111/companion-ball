@@ -211,6 +211,34 @@ window.api.onCursorMoved((pos) => {
   renderer?.setGaze?.(gaze)
 })
 
+// ---------- S4：你走了 / 回来了 / 久坐 ----------
+window.api.onPresenceAway(() => {
+  // 你离开了：它自己待着，先不打扰
+  window.logger.info('presence', 'user away')
+})
+
+window.api.onPresenceBack(({ awayMs }) => {
+  window.logger.info('presence', `user back after ${Math.round(awayMs / 60000)}min`)
+  dispatch({ type: 'returned', now: Date.now(), awayMs })
+  // 离开很久：先闷一下，再说一句；短时间离开：抬头看你
+  if (awayMs >= 2 * 60 * 60 * 1000) grumbleUntil = Date.now() + 2000
+  else patUntil = Date.now() + 1200
+})
+
+window.api.onPresenceSit(({ text }) => {
+  // 久坐提醒：用它自己的语气，不抢焦点，3 秒自灭
+  showBubble(text)
+  window.logger.info('presence.sit', 'reminded')
+})
+
+// ---------- S4：天气氛围（下雨 / 下雪 / 打雷时才说话） ----------
+window.api.onWeatherChanged(({ kind, text }) => {
+  window.logger.info('weather', `kind=${kind}`)
+  // 纯氛围：说一句就够，不播报数据
+  showBubble(text)
+  ball.setAttribute('data-weather', kind)
+})
+
 window.addEventListener('resize', () => {
   bounds = { width: window.innerWidth, height: window.innerHeight }
 })
