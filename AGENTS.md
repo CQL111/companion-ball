@@ -137,6 +137,7 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 | `docs/ROADMAP.md` | 定位、S1–S7 里程碑、验收、商业化 | 产品 |
 | `docs/ARCHITECTURE.md` | 技术栈、分层、进程、数据流、IPC、存储、安全、构建、手机端 | 工程 |
 | `docs/RELEASING.md` | 变更纪律：文档 + 功能测试 + tag + Release | 所有 |
+| `docs/SKIN-AUTHORING.md` | 皮肤与图标制作：prompt 模板 + `npm run pack:skin` | 美术 / 你 |
 | `docs/STRIP-LOG.md` | 从 fortune-ball 剥离了什么（追溯） | 工程 |
 | `README.md` | 对外介绍与构建方式 | 用户 / 贡献者 |
 | `CHANGELOG.md` | 版本变更 | 所有 |

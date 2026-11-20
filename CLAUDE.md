@@ -30,6 +30,7 @@
 | `docs/ROADMAP.md` | 产品定位、S1–S7 里程碑、猫的笔记本、信封收费设计 |
 | `docs/ARCHITECTURE.md` | 技术架构：分层、进程模型、数据流、IPC、存储、安全、手机端 |
 | `docs/RELEASING.md` | 变更纪律：文档 + 功能测试 + tag + Release |
+| `docs/SKIN-AUTHORING.md` | 皮肤与图标制作：AI 生图 prompt + 图集打包 + 验收 |
 | `docs/STRIP-LOG.md` | 从 fortune-ball 的剥离清单（追溯用） |
 | `README.md` | 项目说明与构建方式 |
 | `docs/legal/` | 隐私政策、用户协议、免责声明、第三方许可 |

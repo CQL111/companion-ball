@@ -31,7 +31,8 @@
     "release:patch": "node scripts/release.js patch",
     "release:minor": "node scripts/release.js minor",
     "release:major": "node scripts/release.js major",
-    "build:skin": "node scripts/build-skin.mjs"
+    "build:skin": "node scripts/build-skin.mjs",
+    "pack:skin": "node scripts/pack-skin.mjs"
   },
   "keywords": [
     "electron",
