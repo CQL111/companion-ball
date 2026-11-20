@@ -400,3 +400,45 @@ html, body {
   .pet-menu,
   .menu-item { transition: none; }
 }
+
+/* ---------- 桌面上的身体（v0.5.0） ---------- */
+/* 朝向：用 --face 翻转猫身；位置仍由 .ball 的 transform 负责 */
+.ball-inner { transform: scaleX(var(--face, 1)); }
+
+/* 行走：小幅上下颠簸 */
+.ball[data-loco="walk"] .pet-figure { animation: locoWalk 0.36s ease-in-out infinite; }
+@keyframes locoWalk {
+  0%, 100% { translate: 0 0; rotate: 0deg; }
+  50%      { translate: 0 -2.5px; rotate: -1.5deg; }
+}
+
+/* 攀爬：身体拉长、贴墙 */
+.ball[data-loco="climb"] .pet-figure { animation: locoClimb 0.5s ease-in-out infinite; rotate: -8deg; }
+@keyframes locoClimb {
+  0%, 100% { scale: 1 1; }
+  50%      { scale: 0.95 1.06; }
+}
+
+/* 天花板倒挂：旋转 180°，倒着走 */
+.ball[data-loco="hang"] .pet-figure { rotate: 180deg; animation: locoHang 0.5s ease-in-out infinite; }
+@keyframes locoHang {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 2px; }
+}
+
+/* 落地：蹲一下 */
+.ball[data-loco="land"] .pet-figure { animation: locoLand 0.42s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes locoLand {
+  0%   { scale: 1.12 0.86; }
+  55%  { scale: 0.96 1.06; }
+  100% { scale: 1 1; }
+}
+
+/* 被拿起：轻微上提 */
+.ball[data-loco="held"] .pet-figure { transform: translateY(-2px) rotate(-2deg); }
+
+/* 动画关闭时：保留姿态差异，去掉循环动画 */
+.ball[data-anim="off"][data-loco="walk"] .pet-figure,
+.ball[data-anim="off"][data-loco="climb"] .pet-figure,
+.ball[data-anim="off"][data-loco="hang"] .pet-figure,
+.ball[data-anim="off"][data-loco="land"] .pet-figure { animation: none !important; }

@@ -28,6 +28,7 @@ export default function App(): React.ReactElement {
   const [onlineStatus, setOnlineStatus] = useState<StatusMsg>({ type: '', text: '' })
   const [pullStatus, setPullStatus] = useState<StatusMsg>({ type: '', text: '' })
   const [animations, setAnimations] = useState(true)
+  const [sound, setSound] = useState(true)
   const [petName, setPetName] = useState('')
   const [nameSaved, setNameSaved] = useState('')
   const [mem, setMem] = useState<MemoryListResult | null>(null)
@@ -76,6 +77,12 @@ export default function App(): React.ReactElement {
         setAnimations(v !== false)
       } catch {
         setAnimations(true)
+      }
+      try {
+        const snd = await window.api.getConfig('sound')
+        setSound(snd !== false)
+      } catch {
+        setSound(true)
       }
       try {
         const pet = await window.api.getConfig('pet')
@@ -196,7 +203,17 @@ export default function App(): React.ReactElement {
     }
   }
 
-  const previewAnim = async (): Promise<void> => {    setPreviewing(true)
+  const toggleSound = async (enabled: boolean): Promise<void> => {
+    setSound(enabled)
+    try {
+      await window.api.saveConfig('sound', enabled)
+    } catch {
+      setSound(!enabled)
+    }
+  }
+
+  const previewAnim = async (): Promise<void> => {
+    setPreviewing(true)
     try {
       await window.api.previewBallAnim()
     } catch (e) {
@@ -454,6 +471,16 @@ export default function App(): React.ReactElement {
           <button className="btn" onClick={() => void previewAnim()} disabled={previewing}>▶ 预览动画</button>
           <small className={`inline-hint${animHint.includes('系统') ? ' warn' : ''}`}>{animHint}</small>
         </div>
+      </section>
+
+      <section className="section">
+        <h2>声音</h2>
+        <p className="hint">落地、被摸头、爬上屏幕顶部时的轻响。默认开，音量很低。</p>
+        <label className="switch-row">
+          <input type="checkbox" checked={sound} onChange={(e) => void toggleSound(e.target.checked)} />
+          <span className="switch-track"><i /></span>
+          <span className="switch-label">播放轻音效</span>
+        </label>
       </section>
 
       <section className="section">

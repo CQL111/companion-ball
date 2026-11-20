@@ -122,6 +122,9 @@ try {
     const petMood = await waitFor(pet, `document.querySelector('#ball-inner')?.getAttribute('data-mood') || ''`)
     check('宠物窗口渲染出情绪状态 data-mood', ['neutral','smile','curious','doze','sleep','annoyed','dizzy'].includes(String(petMood)), String(petMood))
     check('气泡层节点存在', !!(await evalIn(pet, `!!document.querySelector('#pet-bubble')`)))
+    // v0.5.0：桌面上的身体
+    const locoState = await waitFor(pet, `document.querySelector('#ball')?.getAttribute('data-loco') || ''`)
+    check('运动状态 data-loco 已渲染', ['idle','walk','climb','hang','fall','land','held'].includes(String(locoState)), String(locoState))
     const pos = await waitFor(
       pet,
       `/translate\\(1200px, 650px\\)/.test(document.querySelector('#ball')?.style.transform || '') && document.querySelector('#ball').style.transform`,

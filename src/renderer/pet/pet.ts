@@ -16,6 +16,8 @@ import {
 } from '../../core/petState'
 import { pickBucket, pickQuip, rememberQuip, type QuipBucket, type QuipDatabase, type QuipHistory } from '../../core/quips'
 import quipDbRaw from '../../data/quips.json'
+import { grabLoco, initLoco, releaseLoco, stepLoco, syncLocoPosition, type Bounds, type Loco } from '../../core/locomotion'
+import { playSound, setSoundEnabled } from './sound'
 
 const ball = document.getElementById('ball') as HTMLDivElement
 const ballInner = document.getElementById('ball-inner') as HTMLDivElement
@@ -108,6 +110,43 @@ function setBallTransform(x: number, y: number): void {
   syncPosToMain()
 }
 
+// ---------- 桌面上的身体（v0.5.0） ----------
+// locomotion 是纯函数：这里每帧推进、应用位置，并把姿态写成 data-loco 让 CSS 播放动画。
+let loco: Loco = initLoco(0, 0)
+let lastFrameAt = 0
+let bounds: Bounds = { width: window.innerWidth, height: window.innerHeight }
+
+function applyLoco(next: Loco): void {
+  loco = next
+  setBallTransform(Math.round(next.x), Math.round(next.y))
+  ball.setAttribute('data-loco', next.state)
+  // 朝向：用 scaleX 翻转猫身，不能动 .ball 的 transform（位置由 setBallTransform 写）
+  ballInner.style.setProperty('--face', String(next.facing))
+}
+
+function locoFrame(now: number): void {
+  const dtMs = lastFrameAt ? now - lastFrameAt : 16
+  lastFrameAt = now
+  if (!dragState) {
+    const r = stepLoco(loco, {
+      dtMs,
+      now: Date.now(),
+      bounds,
+      // 睡觉 / 菜单打开 / 预览动画时不自主活动
+      canWander: petState.mood !== 'sleep' && petState.mood !== 'doze' && !ball.classList.contains('orbit-open') && !isDrawing,
+    })
+    applyLoco(r.loco)
+    if (r.cue === 'land') playSound('land')
+    if (r.cue === 'soft') playSound('soft')
+  }
+  requestAnimationFrame(locoFrame)
+}
+requestAnimationFrame(locoFrame)
+
+window.addEventListener('resize', () => {
+  bounds = { width: window.innerWidth, height: window.innerHeight }
+})
+
 function getCurrentPos(): { x: number; y: number } {
   return { x: posX, y: posY }
 }
@@ -166,6 +205,8 @@ ball.addEventListener('pointerdown', (e) => {
   window.logger.info('ball.drag', `start pos=${posX},${posY}`)
   ball.classList.remove('idle')
   ball.classList.add('grabbing')
+  loco = grabLoco(loco)
+  syncLocoPosition(loco, posX, posY)
   dispatch({ type: 'drag-start', now: Date.now() })
 })
 
@@ -185,6 +226,7 @@ ball.addEventListener('pointermove', (e) => {
     dragState.totalDx += dx
     dragState.totalDy += dy
     setBallTransform(dragState.baseX + dragState.totalDx, dragState.baseY + dragState.totalDy)
+    loco = syncLocoPosition(loco, posX, posY)
     updateMenuLayout()
   }
 })
@@ -204,12 +246,21 @@ ball.addEventListener('pointerup', async () => {
 
   const endNow = Date.now()
   const flung = wasMoved && isFlung(recent)
+  // 释放速度决定抛掷轨迹（px/s）；用最近 150ms 的平均速度
+  const rel = recent.length >= 2 ? recent[recent.length - 1]! : null
+  const firstPt = recent[0]
+  const dtSec = rel && firstPt ? Math.max(0.016, (rel.t - firstPt.t) / 1000) : 0
+  const vx = rel && firstPt ? Math.max(-1800, Math.min(1800, (rel.x - firstPt.x) / dtSec)) : 0
+  const vy = rel && firstPt ? Math.max(-1800, Math.min(1800, (rel.y - firstPt.y) / dtSec)) : 0
+  loco = syncLocoPosition(loco, posX, posY)
+  loco = wasMoved ? releaseLoco(loco, vx, vy, endNow) : releaseLoco(loco, 0, 0, endNow)
   window.logger.info('ball.drag', `end moved=${wasMoved} elapsed=${elapsed}ms flung=${flung} pos=${posX},${posY}`)
 
   // 先让状态机处理（甩 → dizzy 台词由状态机触发）
   dispatch({ type: 'drag-end', now: endNow, flung })
 
   if (!wasMoved && elapsed < 300) {
+    playSound('pat')
     // 单击：状态机记一次点击（可能触发早安 / 不耐烦台词），再打开对话
     dispatch({ type: 'click', now: endNow })
     void window.api.openAiInput()
@@ -412,6 +463,7 @@ function applyAnimations(enabled: boolean): void {
 
 window.api.onConfigChanged((key, value) => {
   if (key === 'animations') applyAnimations(value !== false)
+  if (key === 'sound') setSoundEnabled(value !== false)
   if (key === 'pet') {
     const name = (value as { name?: string } | null)?.name
     if (name) window.logger.info('ball.pet', `name=${name}`)
@@ -448,6 +500,12 @@ paintMood()
   try {
     const anim = await window.api.getConfig('animations')
     applyAnimations(anim !== false)
+    try {
+      const snd = await window.api.getConfig('sound')
+      setSoundEnabled(snd !== false)
+    } catch {
+      setSoundEnabled(true)
+    }
   } catch {
     applyAnimations(true)
   }
@@ -456,6 +514,7 @@ paintMood()
     const saved = await window.api.getConfig('position')
     if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
       setBallTransform(saved.x, saved.y)
+      loco = { ...initLoco(saved.x, saved.y, Date.now()), y: saved.y }
     } else {
       // 第一次启动：放右下角
       const screen = await window.api.getScreenInfo()

@@ -28,5 +28,5 @@ export const legalKeySchema = z.enum(['privacy', 'terms', 'disclaimer', 'thirdpa
 
 export const configKeySchema = z.enum([
   'position', 'autoStart', 'aiConfig', 'localModel', 'installId',
-  'persona', 'agentChat', 'consentVersion', 'animations', 'pet', 'memories', 'notebook', 'memoryEnabled',
+  'persona', 'agentChat', 'consentVersion', 'animations', 'pet', 'sound', 'memories', 'notebook', 'memoryEnabled',
 ])

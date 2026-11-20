@@ -90,6 +90,7 @@
 │   memory.ts            记忆抽取提示词 / 解析 / 合并淘汰           │
 │   notebook.ts          每日日记 + Markdown 导出                  │
 │   backup.ts            全量导出 / 导入（不含 Key）               │
+│   locomotion.ts        走动 / 爬墙 / 天花板 / 抛掷物理（v0.5.0）  │
 │   types.ts             领域类型（shared/types 从这里扩展）      │
 │   logger-types.ts      日志接口（平台层注入实现）               │
 └──────────────────────────────────────────────────────────────┘
@@ -234,7 +235,23 @@ renderer 消费：
 注意两处顺序：记忆按时间正序注入（最近的事实排最后）；日记必须**重算**而不是「当天只写一次」，
 否则启动时写下的「今天你几乎没出现」会一整天不更新。
 
-### 7. 日志与自检
+### 7. 桌面上的身体（v0.5.0）
+
+```
+渲染端 rAF 循环（每帧）
+  → core.locomotion.stepLoco(loco, { dtMs, now, bounds, canWander })
+  → { loco, cue }
+  → setBallTransform(round(x), round(y))   位置仍只由这一个函数写
+  → #ball[data-loco] + --face               姿态/朝向交给 CSS
+
+拖拽生命周期
+  pointerdown → grabLoco（冻结自主运动）→ pointermove → syncLocoPosition
+  pointerup   → releaseLoco(释放速度，夹紧 ±1500 px/s) → fall → 墙/天花板反弹 → land
+```
+
+约束：睡觉 / 打盹 / 菜单打开 / 预览动画时 ；被按住时状态机完全不推进。
+
+### 8. 日志与自检
 
 ```
 renderer window.logger.* → send(log-*) → main registerLogIpc → logger.write

@@ -71,6 +71,8 @@ export interface StoreShape {
   agentChat: AgentChat
   consentVersion: number
   animations: boolean
+  /** 轻合成音效开关（v0.5.0） */
+  sound: boolean
   pet: PetSettings
   /** 长期记忆（S2）；只在本地，上限见 core/memory.ts */
   memories: Memory[]

@@ -6,11 +6,12 @@
 
 ## 一、这是什么
 
-**桌面陪伴 · 团子猫** —— Windows 桌面 Electron 陪伴角色，当前 S1（角色有自己的情绪与台词）。
+**桌面陪伴 · 团子猫** —— Windows 桌面 Electron 陪伴角色，当前 S2.5（有情绪、有记忆，还会在桌面上走动）。
 
 - 80×80 内联 SVG 团子猫常驻桌角：可拖拽、位置记忆、贴边自动翻转菜单
 - 7 种情绪（醒着 / 开心 / 好奇 / 打盹 / 睡着 / 不耐烦 / 眩晕）+ 98 条台词 + 3 秒自动消失的气泡
 - 已实现「不点它也有反应」：久坐打盹、凌晨半睡、靠近唤醒、早间问候、连点会烦、甩晕
+- 会在桌面上自己走动、爬到屏幕边缘与顶部倒挂；拖起甩出有抛物线物理；轻合成音效
 - 点击猫 / `Ctrl+Alt+F` / 托盘「聊聊天」→ 打开 AI 对话浮窗（多轮）
 - 托盘：显示/隐藏、聊天、设置、开机自启、动画、日志级别、重置位置
 - 没有运势、黄历、卡片、精灵
@@ -97,6 +98,8 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 |---|---|
 | 角色表现、拖拽、菜单、热区 | `src/renderer/pet/pet.ts` + `styles/ball.css` + `pet/index.html` |
 | 情绪 / 台词 / 人格 / 记忆 / 日记 | `src/core/{petState,quips,persona,memory,notebook}.ts` + `src/data/*.json` |
+| 走动 / 攀爬 / 抛掷物理 | `src/core/locomotion.ts` + `src/renderer/pet/pet.ts`（rAF 循环） |
+| 轻音效 | `src/renderer/pet/sound.ts` |
 | 记忆抽取与日记编排 | `src/main/remember.ts` |
 | 笔记本窗口 | `src/renderer/notebook/App.tsx` |
 | 主进程入口、启动顺序 | `src/main/index.ts` |
@@ -119,6 +122,7 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 - ✅ fortune-ball 残留已清理（形象收敛为猫、抽签特效与 `fx.js` 移除、死字段移除）
 - ✅ **S1「它有自己的生活」（0.3.0）**：`core/petState` 状态机 + `core/quips` 台词库 + 气泡层 + 起名 + 动画开关生效
 - ✅ **S2「它记得你 / 笔记本上桌」（0.4.0）**：人格卡 + 长期记忆（≤30 条，可逐条删/全部忘记/开关）+ 每日日记 + 全量备份导出/导入
+- ✅ **S2.5「它会在桌面上生活」（0.5.0）**：自主走动 + 爬屏幕边缘 + 天花板倒挂 + 拖甩物理 + 轻音效
 - ⏳ 下一步 S3：许愿瓶（单机）
 - 技术债清单与技术交付清单见 `docs/ARCHITECTURE.md` 第十二节
 
