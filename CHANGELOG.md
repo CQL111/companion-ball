@@ -9,6 +9,8 @@
 - 新增 `tests/e2e/smoke.mjs`：真实启动应用，经 CDP 验证宠物窗口、设置窗口、对话浮窗，
   以及一次真实对话（有 Key 时）；`npm run test:all` 一键跑单测 + 构建 + 功能测试
 - Release notes 自动取 CHANGELOG 中该版本的段落
+- **安全边界**：`release.js` 只发布公开版；内置 Key 版（含真实 Key）永不进入 GitHub Release，
+  需要时本机 `npm run build:key` 产出到 `out-release-key/`
 - 流程文档见 `docs/RELEASING.md`
 
 ### 架构迁移：electron-vite + TypeScript + React 19

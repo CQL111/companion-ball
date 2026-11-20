@@ -13,8 +13,12 @@
 //   5. npm run build（electron-vite 构建成功）
 //   6. node tests/e2e/smoke.mjs（真实启动应用的功能测试）
 //
-// 之后：git tag vX.Y.Z → push → 构建公开版与内置 Key 版 → 同一个 GitHub Release
+// 之后：git tag vX.Y.Z → push → 构建并发布 **公开版** → GitHub Release
 // Release notes 取 CHANGELOG 中该版本的段落。
+//
+// ⚠️ 安全边界：内置 Key 版（electron-builder.key.yml）**永远不发布到 GitHub**。
+// 它把 .env 里的真实 Key 打进安装包，一旦公开上传，任何人都能解包取出并消耗你的额度。
+// 需要内置 Key 版时在本机执行 `npm run build:key`，产物只留在 out-release-key/。
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -113,12 +117,10 @@ try {
   console.log('\n🚀 构建公开版并发布...');
   run('electron-builder --win --publish always --config electron-builder.public.yml');
 
-  // 内置 Key 版：只有本地生成了 bundled-ai.json 才会构建
+  // 内置 Key 版只在本地构建，绝不发布到 GitHub（见文件头部的安全边界说明）
   if (fs.existsSync(path.join(ROOT, 'bundled-ai.json'))) {
-    console.log('\n🚀 构建内置 Key 版并发布（同一 Release）...');
-    run('electron-builder --win --publish always --config electron-builder.key.yml');
-  } else {
-    console.log('\n⏭️ 未找到 bundled-ai.json，跳过内置 Key 版');
+    console.log('\n🔒 检测到 bundled-ai.json：内置 Key 版不随 Release 发布');
+    console.log('   需要个人版安装包时，在本机执行：npm run build:key');
   }
 
   console.log('\n📄 写入 Release notes（来自 CHANGELOG）...');

@@ -33,7 +33,7 @@ npm run test:all
 # 3. 提交（工作区必须干净，release 会检查）
 git add -A && git commit -m "feat: ..."
 
-# 4. 发版：自动升版本 → 门禁 → tag → 推送 → 双版本构建 → 发布
+# 4. 发版：自动升版本 → 门禁 → tag → 推送 → 构建公开版 → 发布
 npm run release:minor     # 或 release:patch / release:major
 ```
 
@@ -44,9 +44,18 @@ npm run release:minor     # 或 release:patch / release:major
   → npm test → npm run typecheck → npm run build → node tests/e2e/smoke.mjs
   → git commit + git tag -a vX.Y.Z → git push --follow-tags
   → electron-builder 公开版（--publish always）
-  → electron-builder 内置 Key 版（存在 bundled-ai.json 时）
   → Release notes 取自 CHANGELOG
 ```
+
+### 安全边界：内置 Key 版永不发布
+
+`electron-builder.key.yml` 会把 `.env` 里的真实 Key 打进安装包。一旦上传到公开的 GitHub
+Release，任何人解包就能取出 Key 并消耗你的额度。因此：
+
+- `release.js` **只发布公开版**；即使存在 `bundled-ai.json` 也明确跳过内置 Key 版
+- 需要个人版安装包时在本机执行 `npm run build:key`，产物只在 `out-release-key/`，
+  自己安装或私下分发，**不要上传到任何公开位置**
+- 如果曾经误传过，立即轮换 Key（`.env` 与设置面板同时更新）
 
 ## 三、版本号规则
 
