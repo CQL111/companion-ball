@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>桌面陪伴</title>
+  <link rel="stylesheet" href="../styles/tokens.css">
+  <link rel="stylesheet" href="../styles/ball.css">
+</head>
+<body>
+  <div id="ball" class="ball">
+    <div class="pet-glow" aria-hidden="true"></div>
+    <div id="ball-inner" class="ball-inner" data-mood="smile" data-persona="cat" aria-hidden="true">
+      <!-- 猫 -->
+      <svg class="pet-figure persona persona-cat" viewBox="0 0 80 80" aria-hidden="true">
+        <g class="pet-body">
+          <ellipse class="pet-ground" cx="40" cy="73" rx="24" ry="4.5"/>
+          <g class="pet-tail">
+            <path class="pet-tail-outer" d="M58 66 C72 70 79 58 74 46 C70 37 62 40 65 47"/>
+            <path class="pet-tail-tip" d="M74 46 C70 37 62 40 65 47"/>
+          </g>
+          <path class="pet-torso" d="M40 22 C57 22 68 34 68 50 C68 65 56 73 40 73 C24 73 12 65 12 50 C12 34 23 22 40 22 Z"/>
+          <path class="pet-belly" d="M40 52 C48 52 53 58 53 63 C53 68 47 71 40 71 C33 71 27 68 27 63 C27 58 32 52 40 52 Z"/>
+          <g class="pet-ear pet-ear-l">
+            <path class="pet-ear-outer" d="M20 33 L16 15 L36 26 Z"/>
+            <path class="pet-ear-inner" d="M23 31 L20.5 20 L32.5 27.5 Z"/>
+          </g>
+          <g class="pet-ear pet-ear-r">
+            <path class="pet-ear-outer" d="M60 33 L64 15 L44 26 Z"/>
+            <path class="pet-ear-inner" d="M57 31 L59.5 20 L47.5 27.5 Z"/>
+          </g>
+          <g class="pet-face">
+            <path class="pet-eye pet-eye-happy" d="M25 42 Q29 37.5 33 42"/>
+            <path class="pet-eye pet-eye-happy" d="M47 42 Q51 37.5 55 42"/>
+            <path class="pet-eye pet-eye-sad" d="M25 38.5 Q29 43 33 38.5"/>
+            <path class="pet-eye pet-eye-sad" d="M47 38.5 Q51 43 55 38.5"/>
+            <path class="pet-mouth" d="M37.5 47.5 Q40 50 42.5 47.5"/>
+            <ellipse class="pet-blush" cx="23" cy="47" rx="4" ry="2.4"/>
+            <ellipse class="pet-blush" cx="57" cy="47" rx="4" ry="2.4"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <div class="ball-halo" aria-hidden="true"></div>
+    <nav class="pet-menu" id="pet-menu" aria-label="角色菜单">
+      <button class="menu-item" data-action="chat" title="和团子聊聊天">
+        <span class="menu-icon">💬</span>
+        <span class="menu-text"><b>聊聊天</b><small>它会记得你们说过的话</small></span>
+      </button>
+      <button class="menu-item" data-action="settings" title="设置">
+        <span class="menu-icon">⚙️</span>
+        <span class="menu-text"><b>设置</b><small>模型 · 动画 · 开机自启</small></span>
+      </button>
+    </nav>
+  </div>
+  <script type="module" src="./pet.ts"></script>
+</body>
+</html>

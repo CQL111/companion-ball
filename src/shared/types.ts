@@ -1,0 +1,158 @@
+// 跨进程共享类型：领域类型从 core 重新导出，这里只增加平台契约（IPC / 视图模型 / window 注入）。
+
+export type {
+  AgentChat,
+  AgentMessage,
+  AgentRole,
+  AiConfig,
+  AiSource,
+  ConfigKey,
+  Persona,
+  Position,
+  Rect,
+  ScreenInfo,
+  StoreShape,
+} from '../core/types'
+
+import type { AgentMessage, AiSource, ConfigKey, Persona, Position, Rect, ScreenInfo, StoreShape } from '../core/types'
+
+export interface ResolvedAiConfig {
+  baseUrl: string
+  token: string
+  model: string
+  source: 'local' | 'online' | 'bundled' | 'env' | AiSource
+  tokenSource?: AiSource
+}
+
+// ---------- 视图模型 ----------
+export interface LlmStatus {
+  source: string
+  model: string
+  baseUrl: string
+  hasToken: boolean
+}
+
+export interface OnlineAiConfigView {
+  baseUrl: string
+  model: string
+  hasToken: boolean
+  tokenHint: string
+  fromEnv: boolean
+  fromBundled: boolean
+  tokenSource: string
+}
+
+export interface LocalModel {
+  name: string
+  size: number
+  sizeLabel: string
+}
+
+export interface LocalModelsResult {
+  available: boolean
+  models: LocalModel[]
+}
+
+export interface PullResult {
+  ok: boolean
+  error?: string | null
+}
+
+export interface TestConnectionResult {
+  ok: boolean
+  model?: string
+  error?: string
+}
+
+export interface SaveAiConfigResult {
+  ok: boolean
+  tokenHint: string
+  tokenSource: AiSource
+}
+
+export interface ChatReply {
+  ok: boolean
+  text?: string
+  notice?: string
+  error?: string
+}
+
+export interface AiInputFocusPayload {
+  messages: AgentMessage[]
+}
+
+export interface AiInputErrorPayload {
+  kind: string
+  text: string
+}
+
+export interface AgentProgressPayload {
+  tool?: string
+  label?: string
+}
+
+export interface ResetChatResult {
+  ok: boolean
+  messages: AgentMessage[]
+}
+
+// ---------- 渲染端可见 API（preload 必须与之一致） ----------
+export interface CompanionApi {
+  getConfig<K extends ConfigKey>(key: K): Promise<StoreShape[K]>
+  saveConfig<K extends ConfigKey>(key: K, value: StoreShape[K]): Promise<boolean>
+
+  getPersona(): Promise<Persona>
+  setPersona(name: Persona): Promise<Persona>
+
+  savePosition(x: number, y: number): Promise<Position | null>
+  updateBallPos(x: number, y: number): Promise<boolean>
+  getScreenInfo(): Promise<ScreenInfo>
+  setHitRegion(rect: Rect | null): void
+
+  openSettings(): Promise<boolean>
+  openLegal(key: string): Promise<boolean>
+  acceptConsent(): Promise<boolean>
+  quitApp(): Promise<boolean>
+  previewBallAnim(): Promise<boolean>
+
+  getLlmStatus(): Promise<LlmStatus>
+  getOnlineAiConfig(): Promise<OnlineAiConfigView>
+  saveOnlineAiConfig(payload: { baseUrl: string; model: string; token: string }): Promise<SaveAiConfigResult>
+  clearOnlineAiToken(): Promise<{ ok: boolean; hasToken: boolean; fromEnv: boolean }>
+  testOnlineAi(): Promise<TestConnectionResult>
+  getLocalModels(): Promise<LocalModelsResult>
+  setLocalModel(name: string): Promise<boolean>
+  pullLocalModel(name: string): Promise<PullResult>
+
+  openAiInput(): Promise<boolean>
+  closeAiInput(): Promise<boolean>
+  aiInterpretAsk(payload: { query: string }): Promise<ChatReply>
+  resetAgentChat(): Promise<ResetChatResult>
+
+  onPersonaChanged(handler: (name: Persona) => void): () => void
+  onPreviewBallAnim(handler: () => void): () => void
+  onAiInputFocus(handler: (data: AiInputFocusPayload) => void): () => void
+  onAiInputLoading(handler: (loading: boolean) => void): () => void
+  onAiInputError(handler: (err: AiInputErrorPayload) => void): () => void
+  onAgentProgress(handler: (info: AgentProgressPayload) => void): () => void
+
+  logInfo(scope: string, msg: string, meta?: Record<string, unknown>): void
+  logWarn(scope: string, msg: string, meta?: Record<string, unknown>): void
+  logError(scope: string, msg: string, meta?: Record<string, unknown>): void
+  logCritical(scope: string, msg: string, meta?: Record<string, unknown>): void
+}
+
+export interface RendererLogger {
+  info: (scope: string, msg: string, meta?: Record<string, unknown>) => void
+  warn: (scope: string, msg: string, meta?: Record<string, unknown>) => void
+  error: (scope: string, msg: string, meta?: Record<string, unknown>) => void
+  critical: (scope: string, msg: string, meta?: Record<string, unknown>) => void
+}
+
+declare global {
+  interface Window {
+    api: CompanionApi
+    logger: RendererLogger
+    LEGAL?: Record<string, { title: string; html: string }>
+  }
+}

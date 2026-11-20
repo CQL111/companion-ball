@@ -1,5 +1,5 @@
 # electron-builder.public.yml - 公开版：不内置任何 Key，用户自行配置
-# appId 必须与 main.js 里的 app.setAppUserModelId('com.companion.ball') 保持一致
+# appId 必须与 src/main/index.ts 里的 app.setAppUserModelId('com.companion.ball') 保持一致
 appId: com.companion.ball
 productName: companion-ball
 # 公开版与内置 Key 版打同一个 Release，资产名必须能区分（产品页下载按钮依赖这个名字）
@@ -7,26 +7,33 @@ artifactName: companion-ball-public.Setup.${version}.${ext}
 copyright: Copyright © 2026 CQL111
 directories:
   output: out-public
+  buildResources: resources
 files:
-  - main.js
-  - preload.js
-  - package.json
-  - src/**/*
-  - docs/legal/**/*
+  - out/**/*
+  - "!**/src/**"
+  - "!**/tests/**"
+  - "!**/docs/**"
+  - "!**/scripts/**"
+  - "!**/resources/**"
+  - "!**/electron.vite.config.ts"
+  - "!**/tsconfig*.json"
+  - "!**/vitest.config.ts"
+  - "!**/product-intro.html"
+  - "!**/CHANGELOG.md"
+  - "!**/AGENTS.md"
+  - "!**/CLAUDE.md"
   - "!**/.env"
   - "!**/.env.*"
-  - "!**/build/**"
-  - "!**/build-out/**"
-  - "!**/out*/**"
-  - "!**/release/**"
-  - "!**/scripts/**"
-  - "!**/smoke-test.js"
-  - "!**/product-intro.html"
+  - "!**/*.map"
+  - "!**/*.md"
+extraResources:
+  - from: resources/tray.png
+    to: tray.png
 win:
   target:
     - target: nsis
       arch: [x64]
-  icon: src/assets/app-icon-1024.png
+  icon: resources/icon-1024.png
 nsis:
   oneClick: false
   perMachine: false
@@ -39,7 +46,7 @@ mac:
   target:
     - target: dmg
       arch: [arm64, x64]
-  icon: src/assets/app-icon-1024.png
+  icon: resources/icon-1024.png
   category: public.app-category.entertainment
   hardenedRuntime: true
   gatekeeperAssess: false

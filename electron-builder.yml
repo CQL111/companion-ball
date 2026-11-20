@@ -1,30 +1,39 @@
-# electron-builder.yml
-# appId 必须与 main.js 里的 app.setAppUserModelId('com.companion.ball') 保持一致，
-# 否则 Windows 通知、任务栏归组和开机自启会指向不同的应用标识
+# electron-builder.yml - 默认 / 本地构建
+# appId 必须与 src/main/index.ts 里的 app.setAppUserModelId('com.companion.ball') 保持一致，
+# 否则 Windows 通知、任务栏归组和开机自启会指向不同的应用标识。
+# 注意：先跑 electron-vite 构建（npm run build），本配置只负责打包应用外框。
 appId: com.companion.ball
 productName: companion-ball
 directories:
   # 产物目录（不用 dist/release，避免被编辑器索引占用导致 EBUSY）
-  output: out
-# 只打包运行所需文件。注意：electron-builder 不会自动忽略 .env，
-# 这里用白名单把源码、文档、脚本和密钥文件挡在安装包之外。
+  output: out-release
+  buildResources: resources
+# 只打包运行所需文件。源码已由 electron-vite 打进 out/，安装包不需要 src/ 与脚本；
+# electron-builder 不会自动忽略 .env，这里显式挡掉。
 files:
-  - main.js
-  - preload.js
-  - package.json
-  - src/**/*
-  - "!**/.env"
-  - "!**/.env.*"
-  - "!**/build/**"
+  - out/**/*
+  - "!**/src/**"
+  - "!**/tests/**"
   - "!**/docs/**"
   - "!**/scripts/**"
-  - "!**/smoke-test.js"
+  - "!**/resources/**"
+  - "!**/electron.vite.config.ts"
+  - "!**/tsconfig*.json"
+  - "!**/vitest.config.ts"
   - "!**/product-intro.html"
-  - "!**/.persona-anim.js"
-  - "!**/.stick-shot.js"
+  - "!**/CHANGELOG.md"
+  - "!**/AGENTS.md"
+  - "!**/CLAUDE.md"
+  - "!**/.env"
+  - "!**/.env.*"
+  - "!**/*.map"
+  - "!**/*.md"
+extraResources:
+  - from: resources/tray.png
+    to: tray.png
 win:
   target: nsis
-  icon: src/assets/app-icon.png
+  icon: resources/icon.png
 nsis:
   oneClick: false
   perMachine: false
@@ -36,7 +45,7 @@ mac:
   target:
     - target: dmg
       arch: [arm64, x64]
-  icon: src/assets/app-icon-1024.png
+  icon: resources/icon-1024.png
   category: public.app-category.entertainment
   hardenedRuntime: true
   gatekeeperAssess: false

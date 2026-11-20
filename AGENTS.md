@@ -1,121 +1,129 @@
 # 工程交接文档（给下一个 Agent）
 
-> 给 AI 协作者 / 开发者的工程速查。读完即可继续编辑。
-> 来源与剥离清单见 `docs/ROADMAP.md`；本项目从 `fortune-ball` v1.3.0 复制壳层后独立演进。
+> 读完即可动手。**先读本文，再按需跳转**：
+> 产品方向 → [`docs/ROADMAP.md`](docs/ROADMAP.md)｜技术细节 → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+> 剥离历史 → [`docs/STRIP-LOG.md`](docs/STRIP-LOG.md)
 
 ## 一、这是什么
 
-**桌面陪伴 · 团子猫** —— Windows 桌面 Electron 陪伴角色（当前 S0）。
+**桌面陪伴 · 团子猫** —— Windows 桌面 Electron 陪伴角色，当前 S0（角色壳 + AI 对话骨架）。
 
-- 80×80 内联 SVG 团子猫常驻桌角，可拖拽、位置记忆、贴边自动翻转菜单
-- 点击猫 / 快捷键 `Ctrl+Alt+F` / 托盘「聊聊天」→ 打开 AI 对话浮窗（多轮）
-- 托盘：显示/隐藏、聊天、设置、开机自启、桌面形象、重置位置、日志
+- 80×80 内联 SVG 团子猫常驻桌角：可拖拽、位置记忆、贴边自动翻转菜单
+- 点击猫 / `Ctrl+Alt+F` / 托盘「聊聊天」→ 打开 AI 对话浮窗（多轮）
+- 托盘：显示/隐藏、聊天、设置、开机自启、动画、日志级别、重置位置
 - 没有运势、黄历、卡片、精灵
 
-**首次启动协议同意**：`AGREEMENT_VERSION` 与 store 的 `consentVersion` 比较，不一致时先开
-`src/consent.html`（不创建主窗口），同意后 `app.emit('consent-accepted')` 再走正常启动；
-未同意关窗即退出。改协议内容时版本 +1。
+定位是**陪伴**不是助手；领域逻辑放 `src/core/`（零平台依赖），为手机端预留。
 
-**法律文档**：源文件 `docs/legal/*.md`，`npm run build:legal`（挂在 prebuild）生成
-`src/legal-data.js`；`src/legal.html?doc=privacy|terms|disclaimer|thirdparty` 渲染。
+## 二、宪法（改动前必须确认）
 
-**两套构建**：`electron-builder.key.yml`（内置 Key，`out/`）、`electron-builder.public.yml`
-（不带 Key，`out-public/`）、`electron-builder.yml`（默认）。`.gitignore` 只忽略
-`build/bundled-ai.json`，`build/entitlements.mac.plist` 需入库。
+1. **每一次变更都必须是：文档记录（CHANGELOG）+ 功能测试 + tag + GitHub Release。**
+   流程与门禁见 [`docs/RELEASING.md`](docs/RELEASING.md)；`npm run release:*` 会自动检查。
+   缺任何一项，这次提交不算完成。
+2. **不引入任何运势 / 黄历 / 卡片 / 精灵代码**（属于 fortune-ball）。
+3. **不建 monorepo**；壳层只在本仓库维护，不复用 fortune-ball 的代码包。
+4. **`src/core/` 零平台依赖**：不得 import `electron` / `node:fs` / `node:path` / `node:os` 等，
+   不得用 `window` / `document` / `process.platform`；`npm run check:core` 会拦（含 TS）。
+   core 也不得 import core 之外的模块；共享类型从 `core/types.ts` 出，`shared/types.ts` 向上扩展。
+5. **不读窗口标题、不上传用户数据**；任何出网调用必须用户知情且写进隐私政策。
+6. **渲染端只能通过 `window.api` 访问主进程**；新增能力必须同步改 `shared/channels.ts`、
+   `shared/ipc.ts`、`main/ipc.ts`、`shared/types.ts`、`preload/index.ts`。
+7. appId 固定 `com.companion.ball`，与 fortune-ball 的 `com.fortune.ball` 互不干扰。
+8. **角色失败静默降级**：AI / 网络 / 后端出错不得打断角色本身。
 
-**三种 Key 来源**：设置面板 `store.aiConfig.token`（user）/ `.env`（env）/ 构建内置
-`resources/bundled-ai.json`（bundled），由 `onlineConfig.resolve(saved,{preferEnv})` 决定。
-开发态 `!app.isPackaged` 时 `.env` 优先，发布版设置面板优先。
+## 三、技术栈与目录
 
-**AI 对话链路**：`aiInput.js`（浮窗）→ `ai-interpret-ask` IPC → `main.js` 的 `withAiFallback`
-→ `agent.runAgent`（多轮、按用户轮裁剪）→ `ai.callLLM`（DeepSeek / Ollama 兼容）。
-**S0 没有工具调用**：`agent.TOOLS = []`，`executeTool` 返回 `NO_TOOLS`；S2 接入人格/记忆时再扩展。
+**electron-vite 4 + Vite 7 + TypeScript 5.9（strict）+ React 19 + zod 4 + Vitest 3**。
 
-**硬约束**：
-- 猫身热区是主进程 `BALL_HALO=40` 的矩形；菜单打开时渲染端必须 `window.api.setHitRegion(rect)`
-  上报「猫 + 面板」外接矩形（主进程换算屏幕坐标），否则面板点不到
-- 装饰层一律 `pointer-events:none`
-- 动画只能动 `.ball-inner`/SVG 分组，**绝不能动 `.ball` 的 transform**（位置由 `setBallTransform` 写）
-- 高频通道 `update-ball-pos` 不写日志，400ms 合并落盘
-- 球位置是浮点，传给 Electron `setPosition` 前必须 `Math.round`
+| 目录 | 职责 | 平台依赖 |
+|---|---|---|
+| `src/main/` | 主进程：窗口、托盘、IPC、光标轮询、诊断 | Electron |
+| `src/preload/` | `contextBridge` 白名单 | Electron |
+| `src/renderer/pet/` | 团子猫（**命令式 TS，不引入 React**） | DOM |
+| `src/renderer/{chat,settings,consent,legal}/` | React 19 窗口 | DOM |
+| `src/renderer/styles/` | tokens + 各窗口 CSS（无 CSS 框架） | — |
+| `src/core/` | 领域：对话循环、状态机（S1）、记忆 / 笔记本（S2） | **零** |
+| `src/shared/` | 跨进程契约：通道名、zod schema、类型 | 零（ipc.ts 用 zod） |
+| `src/data/` | 内容资产：台词、人格卡、模板（S1 起） | 零 |
 
-## 二、应用标识（与 fortune-ball 必须区分）
+依赖方向单向：`renderer / main → shared → core`。完整说明见 `docs/ARCHITECTURE.md` 第三节。
 
-| 项 | 值 |
-|---|---|
-| appId / AppUserModelId | `com.companion.ball` |
-| 单实例锁 | 独立（由 appId 派生，互不影响） |
-| userData / 日志 | `%APPDATA%/companion-ball` |
-| productName | companion-ball |
-| 安装 / 快捷方式名 | 桌面陪伴 |
-| 仓库 | CQL111/companion-ball |
-| Pages | https://cql111.github.io/companion-ball/ （master `/docs`） |
+## 四、常用命令
 
-**改这些标识会导致：** 用户配置丢失、与 fortune-ball 互相抢占单实例、Windows 通知归组冲突、
-Release 资产同名覆盖。不要随手改。
-
-## 三、文件结构 + 职责
-
-| 路径 | 职责 |
-|---|---|
-| `main.js` | 主进程（~1.1k 行）：窗口、托盘、IPC、位置、点击穿透轮询、日志、自检 |
-| `preload.js` | IPC 白名单（24 个 invoke + 事件订阅） |
-| `src/index.html` + `js/ball.js` | 主窗口：团子猫 SVG、拖拽、菜单、hit-region |
-| `src/aiInput.html` + `js/aiInput.js` | AI 对话浮窗 |
-| `src/settings.html` + `js/settings.js` | 设置：模型（线上/本地）、形象、动画、关于 |
-| `src/consent.html` + `consent.js` | 首次启动协议同意 |
-| `src/legal.html` + `js/legal.js` + `src/legal-data.js` | 法律文档渲染（生成物） |
-| `src/js/agent.js` | 多轮对话循环（`runAgent` / 历史裁剪 / 系统人格） |
-| `src/js/ai.js` | `callLLM` / `testConnection` / `diagnose`（结构化错误日志） |
-| `src/js/logger.js` / `rendererLogger.js` / `watcher.js` | 日志落盘、渲染端桥接、日志监控 |
-| `src/js/selfCheck.js` | 启动 5 秒后自检（AI/tray/快捷键等，环境项只 warn） |
-| `src/js/localLLM.js` / `onlineConfig.js` | Ollama 探测 / Key 来源解析 |
-| `src/js/fx.js` | 粒子动画（当前只用于预览） |
-| `src/styles/` | `tokens.css`（主题变量）+ 各窗口样式 |
-| `docs/ROADMAP.md` | 剥离清单与里程碑 |
-| `electron-builder*.yml` | 三套构建配置 |
-| `scripts/release.js` | 双版本构建 + 发布到同一 Release |
-
-## 四、store 数据结构（electron-store defaults）
-
-```js
-{
-  position: {x,y},
-  autoStart: false,
-  aiConfig: { baseUrl, token, model },   // token 明文，仅本机
-  localModel: '',                        // Ollama 模型名
-  installId: '',                         // 首次启动生成
-  persona: 'cat',                        // cat | dog | caishen | lots
-  agentChat: { messages: [], scene: '', updatedAt: 0 },
-  consentVersion: 0,
-}
+```bash
+npm install
+npm run dev               # electron-vite dev（HMR）
+npm test                  # Vitest + check:core
+npm run test:e2e          # 功能测试：真实启动应用（需先 build）
+npm run test:all          # 单测 + 构建 + 功能测试
+npm run typecheck         # tsc 主进程 + 渲染端
+npm run build             # typecheck + build:legal + electron-vite build → out/
+npm run build:public      # 公开版（不带 Key）→ out-public/
+npm run build:personal    # 内置 Key 版 → out-release-key/
+npm run build:legal       # docs/legal/*.md → src/legal-data.js
+npm run build:site        # product-intro.html → docs/index.html（提交产物）
+npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双版本构建并发布
 ```
 
-## 五、IPC API（preload 暴露的 window.api）
+**发版规矩见 [`docs/RELEASING.md`](docs/RELEASING.md)**：一个可交付版本 = 一个 CHANGELOG 条目 +
+一次功能测试通过 + 一个 tag + 一个 GitHub Release。
 
-**配置**：`getConfig(key)` / `saveConfig(key,value)`
-**形象**：`getPersona()` / `setPersona(name)` / `onPersonaChanged`
-**窗口**：`savePosition` / `updateBallPos` / `getScreenInfo` / `setHitRegion` / `onResetBall`
-**设置**：`openSettings` / `openLegal(key)` / `acceptConsent` / `quitApp` / `previewBallAnim` / `onPreviewBallAnim`
-**模型**：`getLlmStatus` / `getOnlineAiConfig` / `saveOnlineAiConfig` / `clearOnlineAiToken` / `testOnlineAi` /
-`getLocalModels` / `setLocalModel` / `pullLocalModel`
-**对话**：`openAiInput` / `closeAiInput` / `aiInterpretAsk({query})` / `resetAgentChat` /
-`onAiInputFocus` / `onAiInputLoading` / `onAiInputError` / `onAgentProgress`
-**日志**：`logInfo/Warn/Error/Critical`
+## 五、最高频的坑（按踩坑概率排序）
 
-## 六、关键约定 & 坑
+1. **球的 transform 只能由 `setBallTransform` 写**（位置由它维护）；动画只能动
+   `.ball-inner` 或 SVG 分组。动了 `.ball` 的 transform 会让球瞬移。
+2. **`update-ball-pos` 是 60fps 通道**：不写日志；落盘走 400ms 合并。
+   球位置是浮点，交给 Electron `setPosition` 前必须 `Math.round`（`getBallScreenPos` 已处理）。
+3. **点击穿透**：窗口全屏透明，默认 `ignoreMouseEvents(true, {forward:true})`；
+   主进程 80ms 轮询光标判断热区。**菜单打开时必须让渲染端 `setHitRegion` 上报
+   「猫 + 面板」外接矩形**，否则面板点不到。
+4. **新增 IPC 要五处同步**（见宪法第 5 条）；`preload` 不要 import `shared/ipc.ts`
+   （会把 zod 打进 preload），通道名只从 `shared/channels.ts` 取。
+5. **装饰层一律 `pointer-events: none`**；菜单有 220ms 开合闩，防止鼠标穿过空隙时闪烁。
+6. **改 `docs/legal/*.md` 后跑 `npm run build:legal`**；内容变更必须同时把
+   `src/main/windows.ts` 的 `AGREEMENT_VERSION` +1（否则老用户不会重新同意）。
+7. **改产品页后跑 `npm run build:site` 并提交 `docs/index.html`**（Pages 源是 master `/docs`）。
+8. **AI 失败要静默降级**：`core/agent.runAgent` 抛出的错误由 `main/chat.ts` 转成浮窗提示。
+9. **不要给微交互加 LLM 调用**：点击 / 悬停 / 状态切换必须走本地状态机（<100ms）。
+   内置 Key 版的每一次调用都是开发者在付钱。
+10. **宠物窗口不要引入 React**。那里是 60fps transform + 穿透 + 热区的手工活；
+    聊天 / 设置 / 笔记本才用 React。
 
-1. 球位置是浮点，Electron 原生 `setPosition` 前必须 `Math.round`（`getBallScreenPos` 已处理）。
-2. `update-ball-pos` 是 60fps 通道，不记日志、400ms 合并落盘。
-3. AI 失败静默降级：`agent.runAgent` 抛出的错误由 IPC handler 转成浮窗错误提示，不打断角色。
-4. 新增窗口必须在 `preload.js` 白名单加 IPC，同时在 `main.js` `registerIpc` 注册。
-5. 协议版本升级会重新弹同意页；改 `docs/legal/*.md` 后跑 `npm run build:legal`。
-6. 产品页改完跑 `npm run build:site` 并提交 `docs/index.html`。
-7. **不要引入 fortune-ball 的运势/黄历/卡片代码**（见 `CLAUDE.md` 硬约束）。
+## 六、代码在哪
 
-## 七、当前状态
+| 你要改… | 去 |
+|---|---|
+| 角色表现、拖拽、菜单、热区 | `src/renderer/pet/pet.ts` + `styles/ball.css` + `pet/index.html` |
+| 主进程入口、启动顺序 | `src/main/index.ts` |
+| 窗口创建 / 定位 | `src/main/windows.ts` |
+| 托盘菜单 / 开机自启 | `src/main/tray.ts` |
+| IPC 注册 | `src/main/ipc.ts`（通道名在 `shared/channels.ts`） |
+| 对话编排 / 错误文案 | `src/main/chat.ts` |
+| 对话循环 / system prompt | `src/core/agent.ts` |
+| LLM 调用、错误码、诊断 | `src/main/services/ai.ts` |
+| 模型来源解析 | `src/main/services/onlineConfig.ts`、`localLLM.ts` |
+| 设置面板 | `src/renderer/settings/App.tsx` |
+| 法律文档 | `docs/legal/*.md` → `src/legal-data.js`（生成物） |
+| 主题变量 | `src/renderer/styles/tokens.css` |
 
-- ✅ S0 可运行：协议页 → 团子猫 → 拖拽 / 托盘 / 设置 / AI 对话
-- ✅ `node smoke-test.js` → 21 通过
-- ✅ 双版本构建配置 + Release 脚本已改名完成
-- ⏳ S1：验证角色吸引力（见 `docs/ROADMAP.md`）
+## 七、当前状态与下一步
+
+- ✅ S0 可运行；`npm test` 15 通过 + core 边界检查通过；typecheck 通过
+- ✅ 技术栈迁移完成（electron-vite / TS / React / zod / Vitest）；打包 app.asar 已验证
+- ✅ 变更纪律落地：`docs/RELEASING.md` + `release.js` 门禁 + `test:e2e` 功能测试
+- ✅ fortune-ball 残留已清理（形象收敛为猫、抽签特效与 `fx.js` 移除、死字段移除）
+- ⏳ **S1「它有自己的生活」**：`petState` 状态机 + 台词库 + 气泡层 + 起名引导
+- ⏳ S1 可选延伸：猫的笔记本 v0（本地模板，验证打开率）
+- 技术债清单与技术交付清单见 `docs/ARCHITECTURE.md` 第十二节
+
+## 八、文档地图
+
+| 文档 | 用途 | 读者 |
+|---|---|---|
+| `AGENTS.md`（本文） | 交接速查、宪法、坑位 | AI 协作者 |
+| `docs/ROADMAP.md` | 定位、S1–S7 里程碑、验收、商业化 | 产品 |
+| `docs/ARCHITECTURE.md` | 技术栈、分层、进程、数据流、IPC、存储、安全、构建、手机端 | 工程 |
+| `docs/RELEASING.md` | 变更纪律：文档 + 功能测试 + tag + Release | 所有 |
+| `docs/STRIP-LOG.md` | 从 fortune-ball 剥离了什么（追溯） | 工程 |
+| `README.md` | 对外介绍与构建方式 | 用户 / 贡献者 |
+| `CHANGELOG.md` | 版本变更 | 所有 |
