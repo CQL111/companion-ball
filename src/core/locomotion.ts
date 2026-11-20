@@ -22,6 +22,9 @@ export type Plan =
   | { kind: 'walk'; x: number; then?: 'climb-left' | 'climb-right' }
   | { kind: 'climb'; side: 'left' | 'right' }
   | { kind: 'hang'; dir: 1 | -1; until: number }
+  /** 原地小动作：伸懒腰 / 舔爪 */
+  | { kind: 'stretch' }
+  | { kind: 'groom' }
 
 export interface Loco {
   state: LocoState
@@ -53,13 +56,13 @@ export interface StepResult {
 }
 
 const GRAVITY = 2400 // px/s²
-const WALK_SPEED = 46 // px/s，慢一点，别像虫子
-const CLIMB_SPEED = 34 // px/s
+const WALK_SPEED = 60 // px/s，与 0.42s 步频配合，看起来像在迈步
+const CLIMB_SPEED = 38 // px/s
 const HANG_SPEED = 30 // px/s
 const LAND_MS = 420
-/** 安静型：两次自主决定之间的间隔 */
-const IDLE_MIN_MS = 60_000
-const IDLE_MAX_MS = 180_000
+/** 安静型：两次自主决定之间的间隔（要求「几分钟内能看见动作」） */
+const IDLE_MIN_MS = 25_000
+const IDLE_MAX_MS = 70_000
 const HANG_MIN_MS = 6_000
 const HANG_MAX_MS = 14_000
 /** 落地冲击超过这个速度才出声，避免每帧都响 */
@@ -230,7 +233,7 @@ export function stepLoco(l: Loco, input: StepInput): StepResult {
   if (input.now < l.nextDecisionAt) return { loco: l, cue: 'none' }
 
   const r = random()
-  if (r < 0.5) {
+  if (r < 0.45) {
     // 在屏幕上走一段
     const target = Math.round(random() * maxX)
     return {
@@ -238,12 +241,26 @@ export function stepLoco(l: Loco, input: StepInput): StepResult {
       cue: 'none',
     }
   }
-  if (r < 0.72) {
+  if (r < 0.75) {
     // 走到最近的墙，然后往上爬
     const side = l.x < maxX / 2 ? 'climb-left' : 'climb-right'
     const target = side === 'climb-left' ? 0 : maxX
     return {
       loco: { ...l, state: 'walk', plan: { kind: 'walk', x: target, then: side }, facing: target >= l.x ? 1 : -1 },
+      cue: 'none',
+    }
+  }
+  if (r < 0.87) {
+    // 伸懒腰：原地，约 3 秒
+    return {
+      loco: { ...l, state: 'idle', plan: { kind: 'stretch' }, nextDecisionAt: input.now + 3000 },
+      cue: 'none',
+    }
+  }
+  if (r < 0.95) {
+    // 舔爪：原地，约 2.5 秒
+    return {
+      loco: { ...l, state: 'idle', plan: { kind: 'groom' }, nextDecisionAt: input.now + 2500 },
       cue: 'none',
     }
   }

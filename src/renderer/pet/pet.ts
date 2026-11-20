@@ -120,6 +120,9 @@ function applyLoco(next: Loco): void {
   loco = next
   setBallTransform(Math.round(next.x), Math.round(next.y))
   ball.setAttribute('data-loco', next.state)
+  // 原地小动作（伸懒腰 / 舔爪）用 data-act 单独驱动一次性动画
+  const act = next.plan && (next.plan.kind === 'stretch' || next.plan.kind === 'groom') ? next.plan.kind : ''
+  if (ball.getAttribute('data-act') !== act) ball.setAttribute('data-act', act)
   // 朝向：用 scaleX 翻转猫身，不能动 .ball 的 transform（位置由 setBallTransform 写）
   ballInner.style.setProperty('--face', String(next.facing))
 }

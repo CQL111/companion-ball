@@ -1,5 +1,8 @@
 /* settings.css - 设置面板（深紫玻璃主题） */
 * { margin: 0; padding: 0; box-sizing: border-box; }
+/* React 挂载点必须有明确高度，否则内容高度撑开 #root、被 body 的 overflow:hidden 裁掉 */
+#root { height: 100%; }
+
 html, body {
   width: 100%;
   height: 100%;

@@ -70,7 +70,9 @@ html, body {
   to   { opacity: 1;   transform: translateX(-50%) scale(1.25); }
 }
 
-/* ---------- 角色本体（S0 仅猫；S1 起由 petState 驱动 data-mood） ---------- */
+/* ---------- 角色本体：有头、有腿、有爪 ---------- */
+/* 所有姿态都由 data-mood（情绪）与 data-loco（动作）两个属性驱动，
+   骨架顺序：地面 → 尾巴 → 后腿 → 身体 → 前腿 → 耳朵 → 头 → 脸 */
 .ball-inner {
   position: absolute;
   inset: 0;
@@ -78,175 +80,278 @@ html, body {
   /* 缩放朝脚下收缩 */
   transform-origin: 50% 88%;
   z-index: 1;
-  /* 通用配色：具体形象在下面覆写 */
-  --fur: color-mix(in srgb, var(--ball-mid, #c9a7ff) 52%, #2a1b33);
-  --fur-dark: color-mix(in srgb, var(--ball-dark, #b39ddb) 40%, #1c1024);
-  --fur-light: color-mix(in srgb, var(--ball-light, #e6dcff) 70%, #3a2450);
-  --ink: #fff6fa;
+  --ink: #3a2b3d;
+  --fur: color-mix(in srgb, var(--ball-mid, #ffd6e0) 88%, #4a3540);
+  --fur-dark: color-mix(in srgb, var(--ball-dark, #f0b6c4) 82%, #4a3540);
+  --fur-light: #fffafc;
+  --nose: #e8728f;
+  --eye: #3a2b3d;
+}
+.pet-all {
+  transform-box: fill-box;
+  transform-origin: 50% 62%;
 }
 .pet-figure {
   display: none;
   width: 100%;
   height: 100%;
   overflow: visible;
-  filter: drop-shadow(0 5px 8px rgba(4, 2, 10, 0.45));
-  transition: transform var(--dur-base) var(--ease-spring), filter var(--dur-base) ease;
+  filter: drop-shadow(0 4px 6px rgba(4, 2, 10, 0.35));
+  transition: rotate var(--dur-base) var(--ease-spring), translate var(--dur-base) var(--ease-spring),
+    scale var(--dur-base) var(--ease-spring);
 }
 .ball-inner .persona-cat { display: block; }
 
-/* 身体与地面 */
-.pet-ground {
-  fill: rgba(8, 3, 14, 0.28);
-  filter: blur(1.5px);
-}
+/* 地面阴影 */
+.pet-ground { fill: rgba(8, 3, 14, 0.22); filter: blur(1.2px); }
+
+/* 身体与肚子 */
 .pet-torso {
   fill: var(--fur);
   transform-box: fill-box;
   transform-origin: 50% 95%;
   animation: petBreath 4.2s ease-in-out infinite;
 }
-.pet-belly {
-  fill: var(--fur-light);
-  opacity: 0.55;
-  transform-box: fill-box;
-  transform-origin: 50% 95%;
-  animation: petBreath 4.2s ease-in-out infinite;
-}
+.pet-belly { fill: var(--fur-light); opacity: 0.75; }
 @keyframes petBreath {
-  0%, 100% { transform: scale(1, 1); }
-  50%      { transform: scale(1.006, 1.018); }
+  0%, 100% { scale: 1 1; }
+  50%      { scale: 1.008 1.02; }
 }
 
-/* 耳朵（猫 / 狗） */
-.pet-ear-l { transform-origin: 36px 26px; }
-.pet-ear-r { transform-origin: 44px 26px; }
+/* 头、口鼻、呆毛 */
+.pet-head { fill: var(--fur); }
+.pet-muzzle { fill: var(--fur-light); opacity: 0.9; }
+.pet-ahoge {
+  fill: none;
+  stroke: var(--fur-dark);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: ahogeSway 3.2s ease-in-out infinite;
+}
+@keyframes ahogeSway {
+  0%, 100% { rotate: -6deg; }
+  50%      { rotate: 8deg; }
+}
+
+/* 耳朵 */
 .pet-ear {
-  transform-box: view-box;
-  transition: transform var(--dur-base) var(--ease-spring);
+  transform-box: fill-box;
+  transform-origin: 50% 90%;
+  transition: rotate var(--dur-base) var(--ease-spring);
 }
+.pet-ear-l { transform-origin: 62% 92%; }
+.pet-ear-r { transform-origin: 38% 92%; }
 .pet-ear-outer { fill: var(--fur); }
-.pet-ear-inner { fill: var(--fur-light); opacity: 0.7; }
-.ball:hover .pet-ear-l { transform: rotate(-5deg); }
-.ball:hover .pet-ear-r { transform: rotate(5deg); }
+.pet-ear-inner { fill: #f7a8bc; opacity: 0.85; }
 
-/* 尾巴（猫 / 狗） */
+/* 尾巴 */
 .pet-tail {
-  transform-box: view-box;
-  transform-origin: 58px 66px;
+  transform-box: fill-box;
+  transform-origin: 100% 92%;
   animation: petTailSway 3.6s ease-in-out infinite;
-  transition: transform var(--dur-base) ease;
+  transition: rotate var(--dur-base) ease;
 }
 .pet-tail-outer {
   fill: none;
   stroke: var(--fur);
-  stroke-width: 8;
+  stroke-width: 7;
   stroke-linecap: round;
 }
 .pet-tail-tip {
   fill: none;
   stroke: var(--fur-light);
-  stroke-width: 8;
-  stroke-linecap: round;
-  opacity: 0.85;
-}
-@keyframes petTailSway {
-  0%, 100% { transform: rotate(-4deg); }
-  50%      { transform: rotate(5deg); }
-}
-.ball:hover .pet-tail { animation-duration: 2.1s; }
-
-/* 面部：闭眼弧（开心/难过两组切换）+ 小嘴 + 腮红 */
-.pet-eye {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  transition: opacity var(--dur-base) ease;
-}
-.pet-eye-sad { opacity: 0; }
-.pet-mouth {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 2;
+  stroke-width: 4;
   stroke-linecap: round;
   opacity: 0.9;
 }
-.pet-blush { fill: color-mix(in srgb, var(--accent-rose) 60%, transparent); opacity: 0.4; }
+@keyframes petTailSway {
+  0%, 100% { rotate: -5deg; }
+  50%      { rotate: 6deg; }
+}
 
-/* 偶尔眯眼 */
+/* 腿与爪：transform-origin 设在髋/肩部，才能摆腿 */
+.pet-leg {
+  transform-box: fill-box;
+  transition: rotate var(--dur-fast) var(--ease-spring);
+}
+.pet-leg-fl { transform-origin: 50% 8%; }
+.pet-leg-fr { transform-origin: 50% 8%; }
+.pet-leg-bl { transform-origin: 50% 8%; }
+.pet-leg-br { transform-origin: 50% 8%; }
+.pet-leg-limb {
+  fill: none;
+  stroke: var(--fur);
+  stroke-width: 6.5;
+  stroke-linecap: round;
+}
+.pet-paw { fill: var(--fur-light); }
+
+/* 脸 */
+.pet-eye-open ellipse { fill: var(--eye); }
+.pet-pupil { fill: #fff; opacity: 0.85; }
+.pet-eye-happy,
+.pet-eye-sad { display: none; }
+.pet-eye-happy,
+.pet-eye-sad {
+  fill: none;
+  stroke: var(--eye);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+.pet-nose { fill: var(--nose); }
+.pet-mouth {
+  fill: none;
+  stroke: var(--eye);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+.pet-blush { fill: #ff8fa8; opacity: 0.35; }
+.pet-whiskers {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 0.8;
+  stroke-linecap: round;
+  opacity: 0.25;
+}
+/* 眨眼 */
 .pet-face {
   transform-box: fill-box;
-  transform-origin: 50% 52%;
-  animation: petBlink 7.4s ease-in-out infinite;
+  transform-origin: 50% 55%;
+  animation: petBlink 6.8s ease-in-out infinite;
 }
 @keyframes petBlink {
-  0%, 92%, 100% { transform: scaleY(1); }
-  95%           { transform: scaleY(1.14); }
+  0%, 92%, 100% { scale: 1 1; }
+  95%           { scale: 1 0.12; }
 }
 
-/* 情绪：耳朵/尾巴/毛色/眼睛 —— mood 由 src/core/petState.ts 驱动 */
-/* neutral：醒着，平静 */
-.ball-inner[data-mood="neutral"] .pet-ear-l { transform: rotate(7deg); }
-.ball-inner[data-mood="neutral"] .pet-ear-r { transform: rotate(-7deg); }
-.ball-inner[data-mood="neutral"] .pet-tail { animation-duration: 5s; }
-.ball-inner[data-mood="neutral"] { --ink: #efe6f6; --fur: color-mix(in srgb, var(--ball-mid, #b3a7ff) 42%, #241a33); }
+/* ---------- 朝向 ---------- */
+/* 只翻转船内的猫，不碰 .ball 的位置 transform */
+.ball-inner { scale: calc(var(--face, 1)) 1; }
 
-/* smile：开心、被叫到 */
-.ball-inner[data-mood="smile"] .pet-ear-l { transform: rotate(-9deg); }
-.ball-inner[data-mood="smile"] .pet-ear-r { transform: rotate(9deg); }
-.ball-inner[data-mood="smile"] .pet-tail { transform: rotate(10deg); animation-duration: 2.4s; }
-.ball-inner[data-mood="smile"] { --ink: #fff2d8; --fur: color-mix(in srgb, var(--ball-mid, #ffd1a1) 55%, #3a2410); }
-.ball-inner[data-mood="smile"] .pet-blush { opacity: 0.45; }
-.ball-inner[data-mood="smile"] .pet-figure { filter: drop-shadow(0 6px 10px rgba(4,2,10,.45)) brightness(1.08); }
+/* ---------- 情绪（data-mood） ---------- */
+/* 默认：睁眼、腿直立 */
+.ball-inner[data-mood="neutral"] .pet-ear-l { rotate: -4deg; }
+.ball-inner[data-mood="neutral"] .pet-ear-r { rotate: 4deg; }
 
-/* curious：被注视 / 被拖起 —— 抬头 */
-.ball-inner[data-mood="curious"] .pet-ear-l { transform: rotate(-14deg); }
-.ball-inner[data-mood="curious"] .pet-ear-r { transform: rotate(14deg); }
-.ball-inner[data-mood="curious"] .pet-tail { animation-duration: 2.8s; }
-.ball-inner[data-mood="curious"] .pet-face { transform: translateY(-1.5px); }
+/* 开心：眯眼、咧嘴、尾巴快摆 */
+.ball-inner[data-mood="smile"] .pet-eye-open { display: none; }
+.ball-inner[data-mood="smile"] .pet-eye-happy { display: block; }
+.ball-inner[data-mood="smile"] .pet-tail { animation-duration: 1.8s; }
+.ball-inner[data-mood="smile"] .pet-blush { opacity: 0.6; }
+.ball-inner[data-mood="smile"] .pet-ahoge { animation-duration: 1.6s; }
 
-/* doze：打盹 —— 半闭眼、耳朵放平 */
-.ball-inner[data-mood="doze"] .pet-ear-l { transform: rotate(16deg); }
-.ball-inner[data-mood="doze"] .pet-ear-r { transform: rotate(-16deg); }
-.ball-inner[data-mood="doze"] .pet-tail { animation-duration: 7s; }
-.ball-inner[data-mood="doze"] .pet-eye-happy { opacity: 0; }
-.ball-inner[data-mood="doze"] .pet-eye-sad { opacity: 1; }
-.ball-inner[data-mood="doze"] .pet-blush { opacity: 0.12; }
-.ball-inner[data-mood="doze"] { --ink: #d9dcff; --fur: color-mix(in srgb, var(--ball-mid, #8c9dff) 38%, #1a1c33); }
+/* 好奇：耳朵前竖、瞳孔放大 */
+.ball-inner[data-mood="curious"] .pet-ear-l { rotate: -14deg; }
+.ball-inner[data-mood="curious"] .pet-ear-r { rotate: 14deg; }
+.ball-inner[data-mood="curious"] .pet-pupil { r: 2.1; }
+.ball-inner[data-mood="curious"] .pet-face { scale: 1.04 1.04; }
 
-/* sleep：睡着 —— 几乎不动 */
-.ball-inner[data-mood="sleep"] .pet-ear-l { transform: rotate(22deg); }
-.ball-inner[data-mood="sleep"] .pet-ear-r { transform: rotate(-22deg); }
-.ball-inner[data-mood="sleep"] .pet-tail { animation: none; transform: rotate(-8deg); }
-.ball-inner[data-mood="sleep"] .pet-eye-happy { opacity: 0; }
-.ball-inner[data-mood="sleep"] .pet-eye-sad { opacity: 1; }
-.ball-inner[data-mood="sleep"] .pet-blush { opacity: 0.1; }
-.ball-inner[data-mood="sleep"] { --ink: #d9dcff; --fur: color-mix(in srgb, var(--ball-mid, #8c9dff) 32%, #141428); }
+/* 打盹：闭眼、耳朵放平、身体矮一点 */
+.ball-inner[data-mood="doze"] .pet-eye-open { display: none; }
+.ball-inner[data-mood="doze"] .pet-eye-sad { display: block; }
+.ball-inner[data-mood="doze"] .pet-ear-l { rotate: -26deg; }
+.ball-inner[data-mood="doze"] .pet-ear-r { rotate: 26deg; }
+.ball-inner[data-mood="doze"] .pet-blush { opacity: 0.15; }
+.ball-inner[data-mood="doze"] .pet-tail { animation-duration: 6s; }
 
-/* annoyed：被连点 —— 背过身、耳朵往后 */
-.ball-inner[data-mood="annoyed"] .pet-ear-l { transform: rotate(26deg); }
-.ball-inner[data-mood="annoyed"] .pet-ear-r { transform: rotate(-26deg); }
-.ball-inner[data-mood="annoyed"] .pet-tail { transform: rotate(-14deg); animation-duration: 1.2s; }
-.ball-inner[data-mood="annoyed"] .pet-figure { filter: drop-shadow(0 4px 6px rgba(4,2,10,.5)) saturate(.8) brightness(.92); }
+/* 睡着：整体缩一点、几乎不动 */
+.ball-inner[data-mood="sleep"] .pet-eye-open { display: none; }
+.ball-inner[data-mood="sleep"] .pet-eye-sad { display: block; }
+.ball-inner[data-mood="sleep"] .pet-ear-l { rotate: -32deg; }
+.ball-inner[data-mood="sleep"] .pet-ear-r { rotate: 32deg; }
+.ball-inner[data-mood="sleep"] .pet-tail { animation: none; rotate: -18deg; }
+.ball-inner[data-mood="sleep"] .pet-face { animation: none; }
 
-/* dizzy：被甩晕 —— 晃动 */
-.ball-inner[data-mood="dizzy"] { animation: petDizzy 0.6s ease-in-out infinite; }
-@keyframes petDizzy {
-  0%, 100% { transform: rotate(-4deg); }
-  50%      { transform: rotate(4deg); }
+/* 不耐烦：耳朵后压、尾巴甩、身体后仰 */
+.ball-inner[data-mood="annoyed"] .pet-ear-l { rotate: -38deg; }
+.ball-inner[data-mood="annoyed"] .pet-ear-r { rotate: 38deg; }
+.ball-inner[data-mood="annoyed"] .pet-tail { animation-duration: 0.9s; }
+.ball-inner[data-mood="annoyed"] .pet-figure { filter: drop-shadow(0 3px 5px rgba(4,2,10,.35)) saturate(0.75); }
+.ball-inner[data-mood="annoyed"] .pet-leg-fl,
+.ball-inner[data-mood="annoyed"] .pet-leg-fr { rotate: 6deg; }
+
+/* 眩晕：眼珠打转由 dizzy 动画负责 */
+.ball-inner[data-mood="dizzy"] .pet-face { animation: dizzyEyes 0.9s linear infinite; }
+@keyframes dizzyEyes {
+  0%   { translate: 0 0; }
+  25%  { translate: 1px -1px; }
+  50%  { translate: 0 1px; }
+  75%  { translate: -1px -1px; }
+  100% { translate: 0 0; }
 }
 
-/* 整体明暗参与情绪表达 */
-.ball-inner[data-mood="annoyed"] .pet-figure { filter: drop-shadow(0 4px 6px rgba(4,2,10,.5)) saturate(.72) brightness(.88); }
-
-/* 动画预览：一次轻微的呼吸 + 柔光，确认动画开关生效 */
-.ball.previewing .ball-inner { animation: previewPulse 0.9s var(--ease-spring); }
-@keyframes previewPulse {
-  0%, 100% { transform: scale(1); }
-  40%      { transform: scale(1.08, 0.94); }
-  70%      { transform: scale(0.97, 1.03); }
+/* ---------- 动作（data-loco） ---------- */
+/* 走路：四肢交替摆，身体轻微起伏 */
+.ball[data-loco="walk"] .pet-leg-fl { animation: legFwd 0.42s ease-in-out infinite; }
+.ball[data-loco="walk"] .pet-leg-br { animation: legFwd 0.42s ease-in-out infinite; }
+.ball[data-loco="walk"] .pet-leg-fr { animation: legBack 0.42s ease-in-out infinite; }
+.ball[data-loco="walk"] .pet-leg-bl { animation: legBack 0.42s ease-in-out infinite; }
+.ball[data-loco="walk"] .pet-all { animation: walkBob 0.42s ease-in-out infinite; }
+@keyframes legFwd {
+  0%, 100% { rotate: 22deg; translate: 1px 0; }
+  50%      { rotate: -22deg; translate: -1px 0; }
 }
-.ball.previewing .pet-glow { animation: glowPulse 0.9s ease-in-out; }
+@keyframes legBack {
+  0%, 100% { rotate: -22deg; translate: -1px 0; }
+  50%      { rotate: 22deg; translate: 1px 0; }
+}
+@keyframes walkBob {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -2px; }
+}
+
+/* 攀爬：整体侧转 90°，像沿着墙往上走 */
+.ball[data-loco="climb"] .pet-all { rotate: -90deg; translate: 4px 0; }
+.ball[data-loco="climb"] .pet-leg-fl { animation: climbA 0.62s ease-in-out infinite; }
+.ball[data-loco="climb"] .pet-leg-br { animation: climbA 0.62s ease-in-out infinite; }
+.ball[data-loco="climb"] .pet-leg-fr { animation: climbB 0.62s ease-in-out infinite; }
+.ball[data-loco="climb"] .pet-leg-bl { animation: climbB 0.62s ease-in-out infinite; }
+.ball[data-loco="climb"] .pet-tail { rotate: 24deg; animation-duration: 1.2s; }
+@keyframes climbA {
+  0%, 100% { rotate: 18deg; }
+  50%      { rotate: -18deg; }
+}
+@keyframes climbB {
+  0%, 100% { rotate: -18deg; }
+  50%      { rotate: 18deg; }
+}
+
+/* 天花板倒挂：整体旋转 180°，贴着顶部 */
+.ball[data-loco="hang"] .pet-all { rotate: 180deg; translate: 0 0; animation: hangSway 1.6s ease-in-out infinite; }
+.ball[data-loco="hang"] .pet-leg-fl,
+.ball[data-loco="hang"] .pet-leg-fr { rotate: -16deg; }
+.ball[data-loco="hang"] .pet-tail { rotate: -18deg; animation-duration: 4.5s; }
+@keyframes hangSway {
+  0%, 100% { rotate: 178deg; }
+  50%      { rotate: 182deg; }
+}
+
+/* 腾空：四肢张开、尾巴伸直 */
+.ball[data-loco="fall"] .pet-leg-fl { rotate: -24deg; }
+.ball[data-loco="fall"] .pet-leg-fr { rotate: 24deg; }
+.ball[data-loco="fall"] .pet-leg-bl { rotate: -18deg; }
+.ball[data-loco="fall"] .pet-leg-br { rotate: 18deg; }
+.ball[data-loco="fall"] .pet-tail { rotate: 26deg; }
+.ball[data-loco="fall"] .pet-all { scale: 1.03 0.97; }
+
+/* 落地：压缩再回弹 */
+.ball[data-loco="land"] .pet-all { animation: landSquash 0.42s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.ball[data-loco="land"] .pet-leg-fl,
+.ball[data-loco="land"] .pet-leg-fr { rotate: 14deg; }
+@keyframes landSquash {
+  0%   { scale: 1.12 0.84; translate: 0 3px; }
+  55%  { scale: 0.95 1.07; translate: 0 -1px; }
+  100% { scale: 1 1; translate: 0 0; }
+}
+
+/* 被拿起：四肢下垂、身体拉长 */
+.ball[data-loco="held"] .pet-all { rotate: 4deg; scale: 0.97 1.04; }
+.ball[data-loco="held"] .pet-leg-fl { rotate: 6deg; }
+.ball[data-loco="held"] .pet-leg-fr { rotate: -6deg; }
+.ball[data-loco="held"] .pet-tail { rotate: -14deg; }
 
 /* ---------- 猫边玻璃面板 ---------- */
 /* 面板相对 #ball 的 80×80 盒子定位（right 侧 top:0 或 left 侧 bottom:2px），
@@ -401,44 +506,58 @@ html, body {
   .menu-item { transition: none; }
 }
 
-/* ---------- 桌面上的身体（v0.5.0） ---------- */
-/* 朝向：用 --face 翻转猫身；位置仍由 .ball 的 transform 负责 */
-.ball-inner { transform: scaleX(var(--face, 1)); }
+/* ---------- 动画关闭：保留姿态差异，去掉循环动画 ---------- */
+.ball[data-anim="off"] .pet-all,
+.ball[data-anim="off"] .pet-leg,
+.ball[data-anim="off"] .pet-tail,
+.ball[data-anim="off"] .pet-face,
+.ball[data-anim="off"] .pet-ahoge,
+.ball[data-anim="off"] .pet-torso,
+.ball[data-anim="off"] .pet-glow,
+.ball[data-anim="off"] .pet-bubble { animation: none !important; transition: none !important; }
 
-/* 行走：小幅上下颠簸 */
-.ball[data-loco="walk"] .pet-figure { animation: locoWalk 0.36s ease-in-out infinite; }
-@keyframes locoWalk {
-  0%, 100% { translate: 0 0; rotate: 0deg; }
-  50%      { translate: 0 -2.5px; rotate: -1.5deg; }
+@media (prefers-reduced-motion: reduce) {
+  .pet-all,
+  .pet-leg,
+  .pet-tail,
+  .pet-face,
+  .pet-ahoge,
+  .pet-torso,
+  .pet-glow { animation: none !important; }
+  .pet-figure, .pet-leg, .pet-ear, .pet-tail, .pet-menu, .menu-item { transition: none !important; }
 }
 
-/* 攀爬：身体拉长、贴墙 */
-.ball[data-loco="climb"] .pet-figure { animation: locoClimb 0.5s ease-in-out infinite; rotate: -8deg; }
-@keyframes locoClimb {
-  0%, 100% { scale: 1 1; }
-  50%      { scale: 0.95 1.06; }
+/* ---------- 原地小动作（data-act，一次性） ---------- */
+/* 伸懒腰：前倾、前腿前伸、屁股翘起 */
+.ball[data-act="stretch"] .pet-all { animation: actStretch 3s ease-in-out; transform-origin: 50% 90%; }
+@keyframes actStretch {
+  0%   { rotate: 0deg; scale: 1 1; }
+  20%  { rotate: 0deg; scale: 1 0.92; }
+  45%  { rotate: -8deg; scale: 1.04 1.06; }
+  70%  { rotate: -8deg; scale: 1.04 1.02; }
+  100% { rotate: 0deg; scale: 1 1; }
+}
+.ball[data-act="stretch"] .pet-leg-fl,
+.ball[data-act="stretch"] .pet-leg-fr { animation: actStretchLegs 3s ease-in-out; }
+@keyframes actStretchLegs {
+  0%   { rotate: 0deg; }
+  30%  { rotate: -34deg; }
+  60%  { rotate: -34deg; }
+  100% { rotate: 0deg; }
 }
 
-/* 天花板倒挂：旋转 180°，倒着走 */
-.ball[data-loco="hang"] .pet-figure { rotate: 180deg; animation: locoHang 0.5s ease-in-out infinite; }
-@keyframes locoHang {
-  0%, 100% { translate: 0 0; }
-  50%      { translate: 0 2px; }
+/* 舔爪：低头、抬一只前爪到脸边 */
+.ball[data-act="groom"] .pet-all { animation: actGroomBody 2.5s ease-in-out; }
+@keyframes actGroomBody {
+  0%, 100% { rotate: 0deg; }
+  30%, 70% { rotate: 5deg; }
 }
-
-/* 落地：蹲一下 */
-.ball[data-loco="land"] .pet-figure { animation: locoLand 0.42s cubic-bezier(0.34, 1.56, 0.64, 1); }
-@keyframes locoLand {
-  0%   { scale: 1.12 0.86; }
-  55%  { scale: 0.96 1.06; }
-  100% { scale: 1 1; }
+.ball[data-act="groom"] .pet-leg-fr { animation: actGroomPaw 2.5s ease-in-out; }
+@keyframes actGroomPaw {
+  0%, 15%  { rotate: 0deg; translate: 0 0; }
+  35%, 65% { rotate: -58deg; translate: -2px -3px; }
+  90%,100% { rotate: 0deg; translate: 0 0; }
 }
-
-/* 被拿起：轻微上提 */
-.ball[data-loco="held"] .pet-figure { transform: translateY(-2px) rotate(-2deg); }
-
-/* 动画关闭时：保留姿态差异，去掉循环动画 */
-.ball[data-anim="off"][data-loco="walk"] .pet-figure,
-.ball[data-anim="off"][data-loco="climb"] .pet-figure,
-.ball[data-anim="off"][data-loco="hang"] .pet-figure,
-.ball[data-anim="off"][data-loco="land"] .pet-figure { animation: none !important; }
+.ball[data-anim="off"][data-act] .pet-all,
+.ball[data-anim="off"][data-act] .pet-leg-fl,
+.ball[data-anim="off"][data-act] .pet-leg-fr { animation: none !important; }
