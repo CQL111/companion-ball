@@ -28,6 +28,8 @@ export default function App(): React.ReactElement {
   const [onlineStatus, setOnlineStatus] = useState<StatusMsg>({ type: '', text: '' })
   const [pullStatus, setPullStatus] = useState<StatusMsg>({ type: '', text: '' })
   const [animations, setAnimations] = useState(true)
+  const [petName, setPetName] = useState('')
+  const [nameSaved, setNameSaved] = useState('')
   const [animHint, setAnimHint] = useState('')
   const [previewing, setPreviewing] = useState(false)
 
@@ -72,6 +74,12 @@ export default function App(): React.ReactElement {
         setAnimations(v !== false)
       } catch {
         setAnimations(true)
+      }
+      try {
+        const pet = await window.api.getConfig('pet')
+        setPetName(pet?.name || '')
+      } catch {
+        /* 忽略：名字为空即可 */
       }
       await refreshLlmStatus()
       await loadOnline()
@@ -181,14 +189,25 @@ export default function App(): React.ReactElement {
     }
   }
 
-  const previewAnim = async (): Promise<void> => {
-    setPreviewing(true)
+  const previewAnim = async (): Promise<void> => {    setPreviewing(true)
     try {
       await window.api.previewBallAnim()
     } catch (e) {
       window.logger.warn('settings.anim', `preview failed: ${(e as Error).message}`)
     } finally {
       setTimeout(() => setPreviewing(false), 2600)
+    }
+  }
+
+  // ---------- 起名 ----------
+  const savePetName = async (): Promise<void> => {
+    const name = petName.trim()
+    try {
+      await window.api.setPetName(name)
+      setNameSaved(name ? `已保存：${name}` : '已清空名字')
+      window.logger.info('settings.petName', `saved (${name ? name.length + ' chars' : 'empty'})`)
+    } catch (e) {
+      setNameSaved('保存失败：' + ((e as Error).message || e))
     }
   }
 
@@ -292,6 +311,27 @@ export default function App(): React.ReactElement {
           <button className="btn primary" onClick={() => void pull()} disabled={pulling}>下载</button>
         </div>
         {pullStatus.text && <div className={`status ${pullStatus.type}`}>{pullStatus.text}</div>}
+      </section>
+
+      <section className="section">
+        <h2>给它起个名字</h2>
+        <p className="hint">起名是它记住你的开始。名字会用在以后的日记与招呼里，随时可以改。</p>
+        <div className="row">
+          <input
+            type="text"
+            value={petName}
+            maxLength={16}
+            placeholder="比如：团子"
+            onChange={(e) => setPetName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void savePetName()
+            }}
+          />
+          <button className="btn primary" onClick={() => void savePetName()}>
+            保存名字
+          </button>
+        </div>
+        <small id="pet-name-hint">{nameSaved || '不超过 16 个字，留空表示不改'}</small>
       </section>
 
       <section className="section">

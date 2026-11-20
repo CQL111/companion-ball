@@ -83,8 +83,15 @@
 ┌──────────────────────────────────────────────────────────────┐
 │ src/core/              领域层：零平台依赖，纯 node 可跑         │
 │   agent.ts             对话循环（callLLM 注入）                 │
+│   petState.ts          情绪状态机（S1）                         │
+│   quips.ts             台词选择（冷却 + 最久未说优先）           │
 │   types.ts             领域类型（shared/types 从这里扩展）      │
 │   logger-types.ts      日志接口（平台层注入实现）               │
+└──────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│ src/data/              内容资产（零依赖，可被 core 引用）        │
+│   quips.json           台词库：7 个 bucket + fallback（S1）     │
 └──────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────┐
@@ -183,7 +190,24 @@ core.agent.runAgent → 注入的 ai.callLLM → net.fetch /v1/chat/completions
 chat 渲染消息气泡；错误码经 friendlyError 转人话
 ```
 
-### 5. 日志与自检
+### 5. 情绪状态机（S1）
+
+```
+renderer 事件（pointerenter / click / drag / 每秒 tick）
+   → core.petState.reducePetState(state, event)     纯函数，零依赖
+   → { state, trigger? }
+
+renderer 消费：
+   state.mood  → #ball-inner[data-mood]             CSS 负责耳朵/尾巴/眨眼/配色
+   trigger     → core.quips.pickBucket + pickQuip   → #pet-bubble（3s 自灭）
+
+持久化：store.pet = { name, lastInteractAt, lastGreetDate }
+   （只在状态变化时写，5s 节流；clicks 等临时数据不落盘）
+```
+
+状态机只输出 mood 与触发类型，不输出动画——手机端可以把同一个 mood 渲染成小组件文案。
+
+### 6. 日志与自检
 
 ```
 renderer window.logger.* → send(log-*) → main registerLogIpc → logger.write
@@ -339,7 +363,7 @@ npx electron-vite build
 |---|---|---|---|
 | 1 | `main.js` 已拆分为 `src/main/*`，但 `ipc.ts` 仍约 300 行、按域集中注册 | 可维护性尚可，继续增长会变长 | 通道超过 ~40 个时按域拆 `ipc/` 目录 |
 | 2 | 无 ESLint / Prettier | 风格一致性靠评审 | S1 前引入（pre-commit） |
-| 3 | 设置开关 `animations` 已保存但渲染端未消费 | 开关无效 | S1 接上（core 输出动作强度，渲染端按开关降级） |
+| 3 | ~~设置开关 `animations` 已保存但渲染端未消费~~ | — | ✅ S1 已接上：`config-changed` 广播 + `data-anim` 关闭过渡/常态动画 |
 | 4 | `legal-data.js` 是 CJS 生成物 | 依赖 Vite 的 CJS 互操作 | 可接受；生成器可改为 `.ts` 后再评估 |
 | 5 | 渲染层无自动化 UI 测试 | 改交互靠手测 | S1 引入 Playwright（打开窗口 + 点击断言） |
 | 6 | `reset-ball` 事件通道已移除（容器组件改用托盘重置位置） | 无影响 | 已清理 |
@@ -348,9 +372,9 @@ npx electron-vite build
 ### S1 的技术交付清单
 
 ```
-src/core/petState.ts      状态机（纯函数）：{now, idleMs, events[]} → {mood, action, intensity}
-src/core/quips.ts         选台词：状态 × 时段 × 触发 → 无重复抽样 + 冷却
-src/data/quips.json       台词库（80–150 条）
+src/core/petState.ts      状态机（纯函数）✔ 已实现：PetEvent → { state, trigger? }
+src/core/quips.ts         选台词 ✔ 已实现：bucket + 冷却 + 最久未说优先
+src/data/quips.json       台词库 ✔ 98 条（7 个 bucket + fallback）
 src/renderer/pet/pet.ts   改为只渲染 core 输出的动作（订阅 IPC / 本地驱动）
 src/main/windows.ts       气泡层（可用 DOM 气泡或独立无边框窗口）
 tests/petState.test.ts    状态机单测

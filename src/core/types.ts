@@ -44,6 +44,15 @@ export interface ScreenInfo {
   y: number
 }
 
+export interface PetSettings {
+  /** 起名；空表示用户还没起名 */
+  name: string
+  /** 与猫最后一次交互的时间戳（状态机持久化） */
+  lastInteractAt: number
+  /** 上次说早安的本地日期（YYYY-MM-DD） */
+  lastGreetDate: string
+}
+
 export interface StoreShape {
   position: Position | null
   autoStart: boolean
@@ -54,6 +63,7 @@ export interface StoreShape {
   agentChat: AgentChat
   consentVersion: number
   animations: boolean
+  pet: PetSettings
 }
 
 export type ConfigKey = keyof StoreShape

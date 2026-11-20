@@ -21,7 +21,7 @@ import {
 } from './windows'
 import { PERSONAS, broadcastPersona, rebuildTrayMenu } from './tray'
 import { CH, EV } from '../shared/channels'
-import { configKeySchema, localModelSchema, rectSchema } from '../shared/ipc'
+import { configKeySchema, localModelSchema, petNameSchema, rectSchema } from '../shared/ipc'
 import type { AiConfig, Persona } from '../shared/types'
 
 // 包装 ipcMain.handle：打入口日志 + 异常兜底
@@ -78,6 +78,9 @@ export function registerIpc(): void {
     const parsed = configKeySchema.safeParse(key)
     if (!parsed.success) return false
     store.set(parsed.data, value as any)
+    if (windows.ball && !windows.ball.isDestroyed()) {
+      windows.ball.webContents.send(EV.configChanged, parsed.data, value)
+    }
     return true
   })
 
@@ -148,6 +151,15 @@ export function registerIpc(): void {
     logger.info('persona', 'set to ' + next)
     broadcastPersona(next)
     rebuildTrayMenu()
+    return next
+  })
+
+  handle(CH.setPetName, (_e, name: unknown) => {
+    const parsed = petNameSchema.safeParse(name)
+    const next = parsed.success ? parsed.data : ''
+    const pet = store.get('pet') || { name: '', lastInteractAt: 0, lastGreetDate: '' }
+    store.set('pet', { ...pet, name: next })
+    logger.info('pet', 'name set ' + (next || '(empty)'))
     return next
   })
 

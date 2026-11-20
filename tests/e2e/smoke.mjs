@@ -118,6 +118,10 @@ try {
     check('宠物窗口渲染出 ball-inner', !!hasCat)
     const menuCount = await waitFor(pet, `document.querySelectorAll('.menu-item').length || 0`)
     check('宠物窗口菜单入口存在', menuCount === 2)
+    // S1：状态机渲染出 data-mood，且气泡节点存在
+    const petMood = await waitFor(pet, `document.querySelector('#ball-inner')?.getAttribute('data-mood') || ''`)
+    check('宠物窗口渲染出情绪状态 data-mood', ['neutral','smile','curious','doze','sleep','annoyed','dizzy'].includes(String(petMood)), String(petMood))
+    check('气泡层节点存在', !!(await evalIn(pet, `!!document.querySelector('#pet-bubble')`)))
     const pos = await waitFor(
       pet,
       `/translate\\(1200px, 650px\\)/.test(document.querySelector('#ball')?.style.transform || '') && document.querySelector('#ball').style.transform`,

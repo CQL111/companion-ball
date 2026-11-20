@@ -184,26 +184,60 @@ html, body {
   95%           { transform: scaleY(1.14); }
 }
 
-/* 情绪：耳朵/尾巴/毛色/眼睛 */
-.ball-inner[data-mood="laugh"] .pet-ear-l { transform: rotate(-9deg); }
-.ball-inner[data-mood="laugh"] .pet-ear-r { transform: rotate(9deg); }
-.ball-inner[data-mood="laugh"] .pet-tail { transform: rotate(10deg); animation-duration: 2.4s; }
-.ball-inner[data-mood="laugh"] { --ink: #fff2d8; --fur: color-mix(in srgb, var(--ball-mid, #ffd1a1) 55%, #3a2410); }
+/* 情绪：耳朵/尾巴/毛色/眼睛 —— mood 由 src/core/petState.ts 驱动 */
+/* neutral：醒着，平静 */
 .ball-inner[data-mood="neutral"] .pet-ear-l { transform: rotate(7deg); }
 .ball-inner[data-mood="neutral"] .pet-ear-r { transform: rotate(-7deg); }
 .ball-inner[data-mood="neutral"] .pet-tail { animation-duration: 5s; }
 .ball-inner[data-mood="neutral"] { --ink: #efe6f6; --fur: color-mix(in srgb, var(--ball-mid, #b3a7ff) 42%, #241a33); }
-.ball-inner[data-mood="cry"] .pet-ear-l { transform: rotate(20deg); }
-.ball-inner[data-mood="cry"] .pet-ear-r { transform: rotate(-20deg); }
-.ball-inner[data-mood="cry"] .pet-tail { animation-duration: 7s; transform: rotate(-8deg); }
-.ball-inner[data-mood="cry"] .pet-eye-happy { opacity: 0; }
-.ball-inner[data-mood="cry"] .pet-eye-sad { opacity: 1; }
-.ball-inner[data-mood="cry"] .pet-blush { opacity: 0.12; }
-.ball-inner[data-mood="cry"] { --ink: #d9dcff; --fur: color-mix(in srgb, var(--ball-mid, #8c9dff) 38%, #1a1c33); }
-.ball-inner[data-mood="laugh"] .pet-blush { opacity: 0.45; }
+
+/* smile：开心、被叫到 */
+.ball-inner[data-mood="smile"] .pet-ear-l { transform: rotate(-9deg); }
+.ball-inner[data-mood="smile"] .pet-ear-r { transform: rotate(9deg); }
+.ball-inner[data-mood="smile"] .pet-tail { transform: rotate(10deg); animation-duration: 2.4s; }
+.ball-inner[data-mood="smile"] { --ink: #fff2d8; --fur: color-mix(in srgb, var(--ball-mid, #ffd1a1) 55%, #3a2410); }
+.ball-inner[data-mood="smile"] .pet-blush { opacity: 0.45; }
+.ball-inner[data-mood="smile"] .pet-figure { filter: drop-shadow(0 6px 10px rgba(4,2,10,.45)) brightness(1.08); }
+
+/* curious：被注视 / 被拖起 —— 抬头 */
+.ball-inner[data-mood="curious"] .pet-ear-l { transform: rotate(-14deg); }
+.ball-inner[data-mood="curious"] .pet-ear-r { transform: rotate(14deg); }
+.ball-inner[data-mood="curious"] .pet-tail { animation-duration: 2.8s; }
+.ball-inner[data-mood="curious"] .pet-face { transform: translateY(-1.5px); }
+
+/* doze：打盹 —— 半闭眼、耳朵放平 */
+.ball-inner[data-mood="doze"] .pet-ear-l { transform: rotate(16deg); }
+.ball-inner[data-mood="doze"] .pet-ear-r { transform: rotate(-16deg); }
+.ball-inner[data-mood="doze"] .pet-tail { animation-duration: 7s; }
+.ball-inner[data-mood="doze"] .pet-eye-happy { opacity: 0; }
+.ball-inner[data-mood="doze"] .pet-eye-sad { opacity: 1; }
+.ball-inner[data-mood="doze"] .pet-blush { opacity: 0.12; }
+.ball-inner[data-mood="doze"] { --ink: #d9dcff; --fur: color-mix(in srgb, var(--ball-mid, #8c9dff) 38%, #1a1c33); }
+
+/* sleep：睡着 —— 几乎不动 */
+.ball-inner[data-mood="sleep"] .pet-ear-l { transform: rotate(22deg); }
+.ball-inner[data-mood="sleep"] .pet-ear-r { transform: rotate(-22deg); }
+.ball-inner[data-mood="sleep"] .pet-tail { animation: none; transform: rotate(-8deg); }
+.ball-inner[data-mood="sleep"] .pet-eye-happy { opacity: 0; }
+.ball-inner[data-mood="sleep"] .pet-eye-sad { opacity: 1; }
+.ball-inner[data-mood="sleep"] .pet-blush { opacity: 0.1; }
+.ball-inner[data-mood="sleep"] { --ink: #d9dcff; --fur: color-mix(in srgb, var(--ball-mid, #8c9dff) 32%, #141428); }
+
+/* annoyed：被连点 —— 背过身、耳朵往后 */
+.ball-inner[data-mood="annoyed"] .pet-ear-l { transform: rotate(26deg); }
+.ball-inner[data-mood="annoyed"] .pet-ear-r { transform: rotate(-26deg); }
+.ball-inner[data-mood="annoyed"] .pet-tail { transform: rotate(-14deg); animation-duration: 1.2s; }
+.ball-inner[data-mood="annoyed"] .pet-figure { filter: drop-shadow(0 4px 6px rgba(4,2,10,.5)) saturate(.8) brightness(.92); }
+
+/* dizzy：被甩晕 —— 晃动 */
+.ball-inner[data-mood="dizzy"] { animation: petDizzy 0.6s ease-in-out infinite; }
+@keyframes petDizzy {
+  0%, 100% { transform: rotate(-4deg); }
+  50%      { transform: rotate(4deg); }
+}
+
 /* 整体明暗参与情绪表达 */
-.ball-inner[data-mood="laugh"] .pet-figure { filter: drop-shadow(0 6px 10px rgba(4,2,10,.45)) brightness(1.08); }
-.ball-inner[data-mood="cry"] .pet-figure { filter: drop-shadow(0 4px 6px rgba(4,2,10,.5)) saturate(.72) brightness(.88); }
+.ball-inner[data-mood="annoyed"] .pet-figure { filter: drop-shadow(0 4px 6px rgba(4,2,10,.5)) saturate(.72) brightness(.88); }
 
 /* 动画预览：一次轻微的呼吸 + 柔光，确认动画开关生效 */
 .ball.previewing .ball-inner { animation: previewPulse 0.9s var(--ease-spring); }
@@ -311,18 +345,21 @@ html, body {
 .pet-bubble {
   position: absolute;
   left: 50%;
-  /* 星轮按钮在上方 33px 处，气泡放到它们上面，避免遮挡 ⏰ 图标 */
-  top: -68px;
+  top: -40px;
   transform: translateX(-50%);
+  max-width: 180px;
   background: var(--bg-panel);
   color: var(--accent-gold);
   font-size: 11px;
-  padding: 4px 10px;
+  line-height: 1.5;
+  padding: 5px 10px;
   border-radius: var(--r-sm);
   border: 1px solid var(--glass-border);
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  text-align: center;
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.2s ease;
   pointer-events: none;
   box-shadow: 0 4px 12px rgba(4, 2, 10, 0.5);
   z-index: 5;
@@ -338,6 +375,15 @@ html, body {
   border-bottom: none;
 }
 .pet-bubble.show { opacity: 1; }
+
+/* 动画关闭（设置里的开关）：去掉过渡与常态动画，保留静态姿态差异 */
+.ball[data-anim="off"] .ball-inner .pet-torso,
+.ball[data-anim="off"] .ball-inner .pet-belly,
+.ball[data-anim="off"] .ball-inner .pet-tail,
+.ball[data-anim="off"] .ball-inner .pet-face,
+.ball[data-anim="off"] .ball-inner[data-mood="dizzy"],
+.ball[data-anim="off"] .ball-inner .pet-glow,
+.ball[data-anim="off"] .pet-bubble { animation: none !important; transition: none !important; }
 
 
 

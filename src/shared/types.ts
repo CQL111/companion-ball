@@ -8,6 +8,7 @@ export type {
   AiSource,
   ConfigKey,
   Persona,
+  PetSettings,
   Position,
   Rect,
   ScreenInfo,
@@ -103,6 +104,7 @@ export interface CompanionApi {
 
   getPersona(): Promise<Persona>
   setPersona(name: Persona): Promise<Persona>
+  setPetName(name: string): Promise<string>
 
   savePosition(x: number, y: number): Promise<Position | null>
   updateBallPos(x: number, y: number): Promise<boolean>
@@ -135,6 +137,7 @@ export interface CompanionApi {
   onAiInputLoading(handler: (loading: boolean) => void): () => void
   onAiInputError(handler: (err: AiInputErrorPayload) => void): () => void
   onAgentProgress(handler: (info: AgentProgressPayload) => void): () => void
+  onConfigChanged(handler: (key: string, value: unknown) => void): () => void
 
   logInfo(scope: string, msg: string, meta?: Record<string, unknown>): void
   logWarn(scope: string, msg: string, meta?: Record<string, unknown>): void

@@ -21,9 +21,11 @@ export const aiSaveSchema = z.object({
 
 export const localModelSchema = z.string().max(200)
 
+export const petNameSchema = z.string().trim().max(16)
+
 export const legalKeySchema = z.enum(['privacy', 'terms', 'disclaimer', 'thirdparty'])
 
 export const configKeySchema = z.enum([
   'position', 'autoStart', 'aiConfig', 'localModel', 'installId',
-  'persona', 'agentChat', 'consentVersion', 'animations',
+  'persona', 'agentChat', 'consentVersion', 'animations', 'pet',
 ])

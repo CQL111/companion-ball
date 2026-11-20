@@ -18,6 +18,7 @@ const api: CompanionApi = {
 
   getPersona: () => ipcRenderer.invoke(CH.getPersona),
   setPersona: (name) => ipcRenderer.invoke(CH.setPersona, name),
+  setPetName: (name) => ipcRenderer.invoke(CH.setPetName, name),
 
   savePosition: (x, y) => ipcRenderer.invoke(CH.savePosition, x, y),
   updateBallPos: (x, y) => ipcRenderer.invoke(CH.updateBallPos, x, y),
@@ -50,6 +51,7 @@ const api: CompanionApi = {
   onAiInputLoading: (handler) => subscribe(EV.aiInputLoading, handler),
   onAiInputError: (handler) => subscribe(EV.aiInputError, handler),
   onAgentProgress: (handler) => subscribe(EV.agentProgress, handler),
+  onConfigChanged: (handler) => subscribe(EV.configChanged, handler),
 
   logInfo: (scope, msg, meta) => ipcRenderer.send(CH.logInfo, scope, msg, meta),
   logWarn: (scope, msg, meta) => ipcRenderer.send(CH.logWarn, scope, msg, meta),

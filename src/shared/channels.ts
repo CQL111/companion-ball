@@ -6,6 +6,7 @@ export const CH = {
   saveConfig: 'save-config',
   getPersona: 'get-persona',
   setPersona: 'set-persona',
+  setPetName: 'set-pet-name',
   savePosition: 'save-position',
   updateBallPos: 'update-ball-pos',
   getScreenInfo: 'get-screen-info',
@@ -41,6 +42,7 @@ export const EV = {
   aiInputLoading: 'ai-input-loading',
   aiInputError: 'ai-input-error',
   agentProgress: 'ai-agent-progress',
+  configChanged: 'config-changed',
 } as const
 
 export type Channel = (typeof CH)[keyof typeof CH]

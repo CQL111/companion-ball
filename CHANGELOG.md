@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.3.0] — S1：它有自己的生活（2026-11-20）
+
+### 新增
+- `src/core/petState.ts`：情绪状态机（纯函数，零平台依赖）。由「时间 + 空闲时长 + 交互事件」
+  推导 7 种情绪：醒着 / 开心 / 好奇 / 打盹 / 睡着 / 不耐烦 / 眩晕
+  - 30 分钟无交互趴下打盹，60 分钟睡着；凌晨自动半睡
+  - 连点 5 次/10 秒 → 不耐烦；不耐烦期间继续点击不再刷新（避免越烦越唠叨）
+  - 拖起 → 好奇；快速甩放（最近 150ms 均速 ≥1.2px/ms）→ 眩晕
+  - 唤醒与早安：指针靠近睡觉的猫会被叫醒；早间首次交互说早安，每天只一次
+  - 只输出 `mood` 与 `trigger`，不输出动画——手机端可把同一 mood 渲染成小组件文案
+- `src/core/quips.ts` + `src/data/quips.json`：台词库 98 条，7 个 bucket
+  （tap / wake / morning / night / drag / annoyed / dizzy）+ fallback
+  - 20 分钟冷却 + 「最久没说过优先」，全体轮完前不重复
+  - 单句 ≤24 字（测试强制）
+- 气泡层：`#pet-bubble`，3 秒自灭、不抢焦点、`pointer-events:none`
+- 设置页「给它起个名字」（≤16 字），写入 `store.pet.name`
+- `store.pet = { name, lastInteractAt, lastGreetDate }`：跨重启恢复情绪（不把旧状态当成新交互）
+- 设置「播放角色动画」开关现在**真的生效**：`config-changed` 广播 → `#ball[data-anim]`，
+  关闭后停掉过渡、呼吸、眨眼、尾巴与眩晕晃动
+- 新增 IPC：`set-pet-name`、事件 `config-changed`；`saveConfig` 会广播给团子猫窗口
+
+### 变更
+- 情绪 CSS 重写为 S1 的 7 种 mood（替代 fortune-ball 遗留的 laugh / neutral / cry 三态）
+- 气泡样式改为可换行、最大宽 180px；位置贴合 80×80 猫身
+- 点击猫：先由状态机记一次点击（可能触发早安 / 不耐烦台词），再打开对话
+
+### 验证
+- `npm test` → **44 通过**（agent 15 + petState 18 + quips 11）+ `check:core` 通过
+- `npm run typecheck` → 无错误
+- `npm run test:e2e` → **11/11 通过**（新增 `data-mood` 与气泡节点断言）
+- 行为验证（CDP，真实应用）：初始 `neutral` → 单击 `smile` + 气泡 → 3.5s 后气泡消失；
+  连点 5 次 → `annoyed`（实测第 5 次触发，第 6 次不再刷新）
+
 ## [0.2.2] — Release notes 提取修复（2026-11-20）
 
 ### 修复

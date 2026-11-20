@@ -22,6 +22,7 @@ export const store = new Store<StoreShape>({
     agentChat: { messages: [], updatedAt: 0 },
     consentVersion: 0,
     animations: true,
+    pet: { name: '', lastInteractAt: 0, lastGreetDate: '' },
   },
 })
 
