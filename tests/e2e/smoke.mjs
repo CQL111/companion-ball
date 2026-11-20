@@ -82,10 +82,31 @@ async function waitFor(target, expression, timeoutMs = 15000) {
   return last
 }
 
+/** 从源码读取当前协议版本：改版本号时 e2e 会自动跟上，不会因为 agree 页卡住 */
+function currentAgreementVersion() {
+  try {
+    const src = fs.readFileSync(path.join(ROOT, 'src/main/windows.ts'), 'utf8')
+    const m = /AGREEMENT_VERSION = (\d+)/.exec(src)
+    return m ? Number(m[1]) : 1
+  } catch {
+    return 1
+  }
+}
+
 function seedConfig() {
   fs.writeFileSync(
     path.join(TMP, 'config.json'),
-    JSON.stringify({ consentVersion: 1, persona: 'cat', position: { x: 1200, y: 650 }, animations: true }, null, 2),
+    JSON.stringify(
+      {
+        consentVersion: currentAgreementVersion(),
+        persona: 'cat',
+        position: { x: 1200, y: 650 },
+        animations: true,
+        sound: false,
+      },
+      null,
+      2,
+    ),
   )
 }
 

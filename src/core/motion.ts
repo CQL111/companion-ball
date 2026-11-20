@@ -33,6 +33,9 @@ export type ClipName =
   | 'dizzy'
   | 'sleep'
   | 'wake'
+  | 'look'
+  | 'pat'
+  | 'grumble'
   | 'turn'
 
 export interface ClipSpec {
@@ -83,6 +86,9 @@ export const REQUIRED_CLIPS: ClipName[] = [
   'dizzy',
   'sleep',
   'wake',
+  'look',
+  'pat',
+  'grumble',
 ]
 
 /** locomotion 状态 → 动作名 */
@@ -113,14 +119,26 @@ const MOOD_CLIP: Partial<Record<PetMood, ClipName>> = {
 export function clipForState(
   loco: LocoState,
   mood: PetMood,
-  opts: { action?: 'stretch' | 'groom'; justWoke?: boolean } = {},
+  opts: {
+    action?: 'stretch' | 'groom'
+    justWoke?: boolean
+    /** 刚被摸头 */
+    justPatted?: boolean
+    /** 刚被戳/挠，有点不满 */
+    justGrumble?: boolean
+    /** 鼠标在附近，它在看你 */
+    looking?: boolean
+  } = {},
 ): ClipName {
   if (loco !== 'idle') return LOCO_CLIP[loco]
   if (opts.justWoke) return 'wake'
+  if (opts.justPatted) return 'pat'
+  if (opts.justGrumble) return 'grumble'
   if (opts.action) return opts.action
   if (mood === 'annoyed') return 'annoyed'
   if (mood === 'dizzy') return 'dizzy'
   if (mood === 'sleep' || mood === 'doze') return 'sleep'
+  if (opts.looking) return 'look'
   if (mood === 'smile') return 'tap'
   if (mood === 'curious') return 'tap'
   return 'idle'

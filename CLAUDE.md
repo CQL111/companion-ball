@@ -6,8 +6,9 @@
 
 - **产品**：桌面陪伴 · 团子猫（companion-ball）— Windows 桌面 AI 陪伴角色
 - **定位**：不是助手，是住你桌面上的一个小家伙（在场感 / 记忆 / 仪式 / 猫的笔记本）
-- **当前阶段**：S0 已完成并清理；S1「它有自己的生活」待开发
-- **版本**：0.1.0
+- **当前阶段**：S0–S2.6 已完成；**S3「许愿瓶（联网 MVP）」进行中**（客户端与服务端代码就绪，
+  待部署 Cloudflare 与填写默认地址）
+- **版本**：0.7.0
 - **来源**：从 `fortune-ball`（`C:\personal\claude`，tag v1.3.0）剥离，独立 git 历史
 
 ## 硬约束
@@ -30,6 +31,8 @@
 | `docs/ROADMAP.md` | 产品定位、S1–S7 里程碑、猫的笔记本、信封收费设计 |
 | `docs/ARCHITECTURE.md` | 技术架构：分层、进程模型、数据流、IPC、存储、安全、手机端 |
 | `docs/RELEASING.md` | 变更纪律：文档 + 功能测试 + tag + Release |
+| `docs/SERVER.md` | 许愿瓶服务端：接口、数据模型、风险与地区策略 |
+| `docs/TESTING-BOTTLE.md` | 本地测试许愿瓶（mock 服务端 + 调试命令） |
 | `docs/SKIN-AUTHORING.md` | 皮肤与图标制作：AI 生图 prompt + 图集打包 + 验收 |
 | `docs/STRIP-LOG.md` | 从 fortune-ball 的剥离清单（追溯用） |
 | `README.md` | 项目说明与构建方式 |

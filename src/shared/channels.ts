@@ -39,6 +39,17 @@ export const CH = {
   closeAiInput: 'close-ai-input',
   aiInterpretAsk: 'ai-interpret-ask',
   resetAgentChat: 'reset-agent-chat',
+  // 许愿瓶（S3）
+  bottleStatus: 'bottle-status',
+  bottleToggle: 'bottle-toggle',
+  bottleThrow: 'bottle-throw',
+  bottlePick: 'bottle-pick',
+  bottleReply: 'bottle-reply',
+  bottleInbox: 'bottle-inbox',
+  bottleReport: 'bottle-report',
+  openMail: 'open-mail',
+  bottlePatrolNow: 'bottle-patrol-now',
+  bottlePickedEvent: 'bottle-picked',
   logInfo: 'log-info',
   logWarn: 'log-warn',
   logError: 'log-error',
@@ -53,6 +64,7 @@ export const EV = {
   aiInputError: 'ai-input-error',
   agentProgress: 'ai-agent-progress',
   configChanged: 'config-changed',
+  cursorMoved: 'cursor-moved',
 } as const
 
 export type Channel = (typeof CH)[keyof typeof CH]

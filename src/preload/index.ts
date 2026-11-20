@@ -32,6 +32,17 @@ const api: CompanionApi = {
   importBackup: () => ipcRenderer.invoke(CH.importBackup),
   bumpInteraction: () => ipcRenderer.invoke(CH.bumpInteraction),
 
+  // 许愿瓶（S3）
+  bottleStatus: () => ipcRenderer.invoke(CH.bottleStatus),
+  bottleToggle: (payload) => ipcRenderer.invoke(CH.bottleToggle, payload),
+  bottleThrow: (body) => ipcRenderer.invoke(CH.bottleThrow, body),
+  bottlePick: (force) => ipcRenderer.invoke(CH.bottlePick, !!force),
+  bottleReply: (bottleId, body) => ipcRenderer.invoke(CH.bottleReply, bottleId, body),
+  bottleInbox: () => ipcRenderer.invoke(CH.bottleInbox),
+  bottleReport: (target, reason) => ipcRenderer.invoke(CH.bottleReport, target, reason),
+  openMail: () => ipcRenderer.invoke(CH.openMail),
+  bottlePatrolNow: () => ipcRenderer.invoke(CH.bottlePatrolNow),
+
   savePosition: (x, y) => ipcRenderer.invoke(CH.savePosition, x, y),
   updateBallPos: (x, y) => ipcRenderer.invoke(CH.updateBallPos, x, y),
   getScreenInfo: () => ipcRenderer.invoke(CH.getScreenInfo),
@@ -64,6 +75,7 @@ const api: CompanionApi = {
   onAiInputError: (handler) => subscribe(EV.aiInputError, handler),
   onAgentProgress: (handler) => subscribe(EV.agentProgress, handler),
   onConfigChanged: (handler) => subscribe(EV.configChanged, handler),
+  onCursorMoved: (handler) => subscribe(EV.cursorMoved, handler),
 
   logInfo: (scope, msg, meta) => ipcRenderer.send(CH.logInfo, scope, msg, meta),
   logWarn: (scope, msg, meta) => ipcRenderer.send(CH.logWarn, scope, msg, meta),

@@ -78,52 +78,76 @@
       "loop": true,
       "row": 7
     },
+    "look": {
+      "view": "front",
+      "frames": 3,
+      "fps": 6,
+      "loop": true,
+      "row": 8
+    },
+    "pat": {
+      "view": "front",
+      "frames": 4,
+      "fps": 8,
+      "loop": false,
+      "row": 9
+    },
+    "grumble": {
+      "view": "front",
+      "frames": 3,
+      "fps": 7,
+      "loop": false,
+      "row": 10
+    },
     "walk": {
       "view": "side",
       "frames": 6,
       "fps": 10,
       "loop": true,
-      "row": 8
+      "row": 11
     },
     "climb": {
       "view": "side",
       "frames": 6,
       "fps": 8,
       "loop": true,
-      "row": 9
+      "row": 12
     },
     "hang": {
       "view": "side",
       "frames": 4,
       "fps": 6,
       "loop": true,
-      "row": 10
+      "row": 13
     },
     "fall": {
       "view": "side",
       "frames": 2,
       "fps": 6,
       "loop": true,
-      "row": 11
+      "row": 14
     },
     "land": {
       "view": "side",
       "frames": 4,
       "fps": 10,
       "loop": false,
-      "row": 12
+      "row": 15
     },
     "held": {
       "view": "side",
       "frames": 2,
       "fps": 4,
       "loop": true,
-      "row": 13
+      "row": 16
     }
   },
   "fallbacks": {
     "wake": "tap",
-    "turn": "idle"
+    "turn": "idle",
+    "look": "idle",
+    "pat": "tap",
+    "grumble": "annoyed"
   },
   "assets": {
     "atlas": "cat.png",

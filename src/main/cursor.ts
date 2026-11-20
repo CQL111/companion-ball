@@ -29,6 +29,15 @@ export function startCursorPolling(): void {
       isOver = cursor.x >= rx && cursor.x <= rx + r.w && cursor.y >= ry && cursor.y <= ry + r.h
     }
 
+    // 把光标位置（窗口内坐标）推给渲染端，让角色能「看」向鼠标。
+    // 与点击穿透解耦：即使鼠标不在猫身上也发送，这样它能注意到你靠近。
+    if (win.webContents && !win.webContents.isDestroyed()) {
+      const lx = cursor.x - bounds.x
+      const ly = cursor.y - bounds.y
+      // 每 80ms 一次，频率不高，不必合并
+      win.webContents.send('cursor-moved', { x: lx, y: ly })
+    }
+
     const shouldIgnore = !isOver
     if (state.lastIgnoreState !== shouldIgnore) {
       state.lastIgnoreState = shouldIgnore

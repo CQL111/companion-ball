@@ -16,6 +16,8 @@ export type QuipBucket =
   | 'dizzy'
   | 'night'
   | 'drag'
+  | 'pat'
+  | 'grumble'
 
 export interface QuipDatabase {
   version: number
@@ -46,7 +48,13 @@ export const MAX_HISTORY = 200
  * 选择 bucket：触发优先，其次按时段兜底。
  * 深夜（0–6 点）用户点了猫，给的是「夜聊」语气而不是白天问候。
  */
-export function pickBucket(trigger: PetTrigger | undefined, now: number, dragging = false): QuipBucket {
+export function pickBucket(
+  trigger: PetTrigger | undefined,
+  now: number,
+  dragging = false,
+  forced?: QuipBucket,
+): QuipBucket {
+  if (forced) return forced
   if (dragging) return 'drag'
   if (trigger === 'morning') return 'morning'
   if (trigger === 'annoyed') return 'annoyed'
@@ -110,7 +118,7 @@ export function validateQuipDatabase(db: unknown): string[] {
   const errors: string[] = []
   if (!db || typeof db !== 'object') return ['台词库不是对象']
   const d = db as Partial<QuipDatabase>
-  for (const key of ['tap', 'wake', 'morning', 'annoyed', 'dizzy', 'night', 'drag'] as const) {
+  for (const key of ['tap', 'wake', 'morning', 'annoyed', 'dizzy', 'night', 'drag', 'pat', 'grumble'] as const) {
     const list = d.lines?.[key]
     if (!Array.isArray(list) || list.length === 0) errors.push(`lines.${key} 为空`)
     else if (list.some((l) => typeof l !== 'string' || !l.trim())) errors.push(`lines.${key} 含空台词`)

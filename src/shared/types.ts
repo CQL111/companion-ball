@@ -127,6 +127,21 @@ export interface ImportResult {
   stats?: { memories: number; diaryEntries: number }
 }
 
+export interface BottleStatusView {
+  enabled: boolean
+  endpoint: string
+  canThrow: boolean
+  thrownToday: number
+  dailyLimit: number
+}
+
+export interface MailApiResult<T> {
+  ok: boolean
+  data?: T
+  error?: string
+  errorText?: string
+}
+
 export interface ResetChatResult {
   ok: boolean
   messages: AgentMessage[]
@@ -152,6 +167,17 @@ export interface CompanionApi {
   exportBackup(): Promise<ExportResult>
   importBackup(): Promise<ImportResult>
   bumpInteraction(): Promise<boolean>
+
+  // 许愿瓶（S3，需用户主动开启）
+  bottleStatus(): Promise<BottleStatusView>
+  bottleToggle(payload: { enabled: boolean; endpoint?: string }): Promise<BottleStatusView>
+  bottleThrow(body: string): Promise<MailApiResult<{ id: string; alias: string }>>
+  bottlePick(force?: boolean): Promise<MailApiResult<{ id: string; body: string; alias: string } | null>>
+  bottleReply(bottleId: string, body: string): Promise<MailApiResult<true>>
+  bottleInbox(): Promise<MailApiResult<Array<{ bottleBody: string; replyBody: string; replyAlias: string; createdAt: number }>>>
+  bottleReport(target: { bottleId?: string; replyId?: string }, reason: 'spam' | 'abuse' | 'other'): Promise<MailApiResult<true>>
+  openMail(): Promise<boolean>
+  bottlePatrolNow(): Promise<MailApiResult<{ alias: string; body: string } | null>>
 
   savePosition(x: number, y: number): Promise<Position | null>
   updateBallPos(x: number, y: number): Promise<boolean>
@@ -185,6 +211,8 @@ export interface CompanionApi {
   onAiInputError(handler: (err: AiInputErrorPayload) => void): () => void
   onAgentProgress(handler: (info: AgentProgressPayload) => void): () => void
   onConfigChanged(handler: (key: string, value: unknown) => void): () => void
+  /** 主进程光标位置（窗口内坐标），用于让角色看向鼠标 */
+  onCursorMoved(handler: (pos: { x: number; y: number }) => void): () => void
 
   logInfo(scope: string, msg: string, meta?: Record<string, unknown>): void
   logWarn(scope: string, msg: string, meta?: Record<string, unknown>): void

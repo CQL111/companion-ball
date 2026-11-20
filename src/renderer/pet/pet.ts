@@ -18,6 +18,7 @@ import { pickBucket, pickQuip, rememberQuip, type QuipBucket, type QuipDatabase,
 import quipDbRaw from '../../data/quips.json'
 import { grabLoco, initLoco, releaseLoco, stepLoco, syncLocoPosition, type Bounds, type Loco } from '../../core/locomotion'
 import { playSound, setSoundEnabled } from './sound'
+import { gazeToward, isPayingAttention, reactionFor, zoneAt } from '../../core/touch'
 import { clipForState, type ClipName } from '../../core/motion'
 import { loadSkin, type SpriteRenderer } from './renderer'
 // ?url 让 Vite 负责拷贝素材并给出正确地址（dev 与打包后都可用）
@@ -48,15 +49,24 @@ let lastPersistedAt = 0
 let renderer: SpriteRenderer | null = null
 let currentClip: ClipName | null = null
 let justWokeUntil = 0
+let patUntil = 0
+let grumbleUntil = 0
+let pointer: { x: number; y: number } | null = null
+let looking = false
+let gaze = { x: 0, y: 0 }
 
 /** 把「身体状态 + 情绪 + 原地动作」映射成动作名，交给渲染器 */
 function paintClip(): void {
   if (!renderer) return
   const plan = loco.plan
   const action = plan && (plan.kind === 'stretch' || plan.kind === 'groom') ? plan.kind : undefined
+  const now = Date.now()
   const clip = clipForState(loco.state, petState.mood, {
     action,
-    justWoke: Date.now() < justWokeUntil,
+    justWoke: now < justWokeUntil,
+    justPatted: now < patUntil,
+    justGrumble: now < grumbleUntil,
+    looking,
   })
   if (clip !== currentClip) {
     currentClip = clip
@@ -189,6 +199,18 @@ function locoFrame(now: number): void {
 }
 requestAnimationFrame(locoFrame)
 
+// ---------- 注视：主进程每 80ms 推一次光标位置 ----------
+window.api.onCursorMoved((pos) => {
+  pointer = pos
+  const cx = posX + BALL_SIZE / 2
+  const cy = posY + BALL_SIZE * 0.4
+  const dist = Math.hypot(pos.x - cx, pos.y - cy)
+  looking = isPayingAttention(dist) && petState.mood !== 'sleep' && petState.mood !== 'doze'
+  gaze = gazeToward(cx, cy, pos.x, pos.y)
+  // 瞳孔偏移交给渲染器（缩放后的画布内坐标）
+  renderer?.setGaze?.(gaze)
+})
+
 window.addEventListener('resize', () => {
   bounds = { width: window.innerWidth, height: window.innerHeight }
 })
@@ -221,6 +243,9 @@ interface DragState {
   totalDy: number
   baseX: number
   baseY: number
+  /** 按下时的窗口坐标，用于判断点了哪个部位 */
+  downX: number
+  downY: number
   /** 最近 150ms 的移动轨迹，用于判断「甩」 */
   recent: Array<{ t: number; x: number; y: number }>
 }
@@ -246,6 +271,8 @@ ball.addEventListener('pointerdown', (e) => {
     totalDy: 0,
     baseX: posX,
     baseY: posY,
+    downX: e.clientX,
+    downY: e.clientY,
     recent: [],
   }
   window.logger.info('ball.drag', `start pos=${posX},${posY}`)
@@ -283,6 +310,8 @@ ball.addEventListener('pointerup', async () => {
   const elapsed = Date.now() - dragState.startTime
   const pointerId = dragState.pointerId
   const recent = dragState.recent
+  const clickX = dragState.downX
+  const clickY = dragState.downY
   dragState = null
   try {
     ball.releasePointerCapture(pointerId)
@@ -299,16 +328,39 @@ ball.addEventListener('pointerup', async () => {
   const vx = rel && firstPt ? Math.max(-1800, Math.min(1800, (rel.x - firstPt.x) / dtSec)) : 0
   const vy = rel && firstPt ? Math.max(-1800, Math.min(1800, (rel.y - firstPt.y) / dtSec)) : 0
   loco = syncLocoPosition(loco, posX, posY)
-  loco = wasMoved ? releaseLoco(loco, vx, vy, endNow) : releaseLoco(loco, 0, 0, endNow)
+  // 只有真正拖动过才进入自由落体；单纯点一下不应该让猫从当前位置掉到地面
+  if (wasMoved) {
+    loco = releaseLoco(loco, vx, vy, endNow)
+  } else {
+    loco = { ...loco, state: 'idle', plan: null, vx: 0, vy: 0, nextDecisionAt: endNow + 20_000 }
+  }
   window.logger.info('ball.drag', `end moved=${wasMoved} elapsed=${elapsed}ms flung=${flung} pos=${posX},${posY}`)
 
   // 先让状态机处理（甩 → dizzy 台词由状态机触发）
   dispatch({ type: 'drag-end', now: endNow, flung })
 
   if (!wasMoved && elapsed < 300) {
-    playSound('pat')
-    // 单击：状态机记一次点击（可能触发早安 / 不耐烦台词），再打开对话
-    dispatch({ type: 'click', now: endNow })
+    // 按落点分区：摸头 / 戳身体 / 挠脚 → 不同动作与台词
+    const nx = (clickX - posX) / BALL_SIZE
+    const ny = (clickY - posY) / BALL_SIZE
+    const view = loco.state === 'idle' ? 'front' : 'side'
+    const zone = zoneAt(view, nx, ny)
+    const reaction = reactionFor(zone)
+    const nowMs = Date.now()
+    if (reaction.action === 'pat') {
+      patUntil = nowMs + 1600
+      playSound('pat')
+    } else if (reaction.action === 'grumble') {
+      grumbleUntil = nowMs + 1400
+      playSound('soft')
+    } else {
+      playSound('pat')
+    }
+    dispatch({ type: 'click', now: nowMs })
+    ball.setAttribute('data-zone', zone)
+    // 分区台词：摸头说 pat 组，挠脚说 grumble 组，戳身体保持普通点击
+    if (zone === 'head') speak(pickBucket('tap', nowMs, false, 'pat'), nowMs)
+    else if (zone === 'feet') speak(pickBucket('tap', nowMs, false, 'grumble'), nowMs)
     void window.api.openAiInput()
   } else if (wasMoved) {
     await window.api.savePosition(posX, posY)

@@ -1,0 +1,23 @@
+# companion-bottles - 许愿瓶服务端
+# 部署：npx wrangler d1 create companion-bottles → 填 database_id → wrangler deploy
+# 设计与风险见 docs/SERVER.md
+
+name = "companion-bottles"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "companion-bottles"
+database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+
+[vars]
+BOTTLE_TTL_DAYS = "7"
+MAX_PICKS = "3"
+DAILY_BOTTLE_LIMIT = "3"
+DAILY_REPLY_LIMIT = "10"
+# 设为 "1" 立即关闭所有写接口（紧急开关）
+EMERGENCY_OFF = "0"
+
+[observability]
+enabled = true

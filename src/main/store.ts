@@ -29,6 +29,8 @@ export const store = new Store<StoreShape>({
     memories: [],
     notebook: { version: 1, entries: [] },
     memoryEnabled: true,
+    bottle: { enabled: false, endpoint: '', lastOutAt: 0, lastPickedAt: 0 },
+    bottleThrownToday: { day: '', n: 0 },
   },
 })
 

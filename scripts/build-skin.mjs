@@ -45,6 +45,9 @@ const ROWS = [
   ['front', 'groom', 6, 8, false],
   ['front', 'annoyed', 4, 8, true],
   ['front', 'dizzy', 4, 10, true],
+  ['front', 'look', 3, 6, true],
+  ['front', 'pat', 4, 8, false],
+  ['front', 'grumble', 3, 7, false],
   ['side', 'walk', 6, 10, true],
   ['side', 'climb', 6, 8, true],
   ['side', 'hang', 4, 6, true],
@@ -214,7 +217,14 @@ function drawFront(ctx, ox, oy, p) {
   ctx.closePath()
   ctx.fillStyle = PALETTE.nose
   ctx.fill()
-  if (p.mouth === 'open') {
+  if (p.mouthGrumble) {
+    ctx.strokeStyle = PALETTE.ink
+    ctx.lineWidth = 1 * S
+    ctx.beginPath()
+    ctx.moveTo(-2.2 * S, 18.6 * S)
+    ctx.quadraticCurveTo(0, 17.2 * S, 2.2 * S, 18.6 * S)
+    ctx.stroke()
+  } else if (p.mouth === 'open') {
     ellipse(ctx, 0, 18.4, 1.8, 1.6, PALETTE.ink)
   } else {
     ctx.strokeStyle = PALETTE.ink
@@ -475,6 +485,40 @@ ROWS.forEach(([view, name, frames, fps, loop], row) => {
             bob: f % 2 === 0 ? -0.8 : 0.8,
           })
           break
+        case 'look':
+          // 注视：瞳孔随帧左右扫，头微微偏
+          drawFront(ctx, 0, 0, {
+            eyeMode: 'open',
+            pupilX: [ -1.6, 0, 1.6 ][f] ?? 0,
+            headTilt: [ -1.2, 0, 1.2 ][f] ?? 0,
+            tail: wave * 6,
+            bob: wave * 0.4,
+          })
+          break
+        case 'pat':
+          // 被摸头：眯眼、耳朵后压一点点、身体微微下压
+          drawFront(ctx, 0, 0, {
+            eyes: 'happy',
+            ear: f === 0 ? 4 : -6,
+            squash: f === 0 ? 0.97 : 1.01,
+            blush: true,
+            heart: f >= 1,
+            tail: 16,
+            bob: f === 0 ? -0.8 : 0.2,
+          })
+          break
+        case 'grumble':
+          // 被挠脚/戳：耳朵后压、斜眼、身体往后缩
+          drawFront(ctx, 0, 0, {
+            eyes: 'angry',
+            ear: -34,
+            lean: -4,
+            squash: 0.96,
+            tail: wave * 22,
+            mouthGrumble: true,
+            bob: wave * 0.8,
+          })
+          break
       }
     } else {
       switch (name) {
@@ -562,7 +606,8 @@ const manifest = {
       },
     ]),
   ),
-  fallbacks: { wake: 'tap', turn: 'idle' },
+  // 新动作在旧皮肤里缺失时的降级：look→idle、pat→tap、grumble→annoyed
+  fallbacks: { wake: 'tap', turn: 'idle', look: 'idle', pat: 'tap', grumble: 'annoyed' },
   assets: { atlas: 'cat.png', columns: FRAMES_PER_ROW },
 }
 

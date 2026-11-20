@@ -148,11 +148,11 @@ describe('validateManifest', () => {
 })
 
 describe('clipsByView', () => {
-  it('美术排期：正面 8 个、侧影 6 个', () => {
+  it('美术排期：正面 11 个、侧影 6 个', () => {
     const m = makeManifest()
     const byView = clipsByView(m)
     expect(byView.front.sort()).toEqual(
-      ['annoyed', 'dizzy', 'groom', 'idle', 'sleep', 'stretch', 'tap', 'wake'].sort(),
+      ['annoyed', 'dizzy', 'groom', 'grumble', 'idle', 'look', 'pat', 'sleep', 'stretch', 'tap', 'wake'].sort(),
     )
     expect(byView.side.sort()).toEqual(['climb', 'fall', 'hang', 'held', 'land', 'walk'].sort())
   })

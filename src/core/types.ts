@@ -45,6 +45,7 @@ export interface ScreenInfo {
 }
 
 import type { Memory } from './memory'
+import type { BottleSettings } from './mailbox'
 import type { Notebook } from './notebook'
 
 export interface PetSettings {
@@ -80,6 +81,10 @@ export interface StoreShape {
   notebook: Notebook
   /** 记忆抽取开关（默认开） */
   memoryEnabled: boolean
+  /** 许愿瓶（S3，默认关闭，opt-in） */
+  bottle: BottleSettings
+  /** 许愿瓶本地配额计数（与设置解耦，便于每日重置） */
+  bottleThrownToday: { day: string; n: number }
 }
 
 export type ConfigKey = keyof StoreShape

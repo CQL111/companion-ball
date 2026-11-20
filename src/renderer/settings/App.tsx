@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { LlmStatus, LocalModelsResult, MemoryListResult, OnlineAiConfigView } from '../../shared/types'
+import type { BottleStatusView, LlmStatus, LocalModelsResult, MemoryListResult, OnlineAiConfigView } from '../../shared/types'
 
 type StatusType = '' | 'ok' | 'err' | 'info'
 interface StatusMsg {
@@ -33,6 +33,8 @@ export default function App(): React.ReactElement {
   const [nameSaved, setNameSaved] = useState('')
   const [mem, setMem] = useState<MemoryListResult | null>(null)
   const [memStatus, setMemStatus] = useState('')
+  const [bottle, setBottle] = useState<BottleStatusView | null>(null)
+  const [bottleEndpoint, setBottleEndpoint] = useState('')
   const [animHint, setAnimHint] = useState('')
   const [previewing, setPreviewing] = useState(false)
 
@@ -89,6 +91,13 @@ export default function App(): React.ReactElement {
         setPetName(pet?.name || '')
       } catch {
         /* 忽略：名字为空即可 */
+      }
+      try {
+        const b = await window.api.bottleStatus()
+        setBottle(b)
+        setBottleEndpoint(b.endpoint || '')
+      } catch {
+        setBottle(null)
       }
       try {
         setMem(await window.api.getMemories())
@@ -248,6 +257,13 @@ export default function App(): React.ReactElement {
   const toggleMemory = async (enabled: boolean): Promise<void> => {
     await window.api.setMemoryEnabled(enabled)
     await refreshMemories()
+  }
+
+  // ---------- 许愿瓶 ----------
+  const toggleBottle = async (enabled: boolean): Promise<void> => {
+    const view = await window.api.bottleToggle({ enabled, endpoint: bottleEndpoint.trim() })
+    setBottle(view)
+    window.logger.info('settings.bottle', `enabled=${enabled}`)
   }
 
   // ---------- 备份 ----------
@@ -426,6 +442,45 @@ export default function App(): React.ReactElement {
             <button className="btn ghost" onClick={() => void clearMemories()}>
               全部忘记
             </button>
+          </div>
+        )}
+      </section>
+
+      <section className="section">
+        <h2>许愿瓶</h2>
+        <p className="hint">
+          把一句话放进瓶子，它会漂给另一个也醒着的人。纸条会**发送到服务器**，对方只能看到随机代号；
+          不能私聊，七天后没人捡就沉海。
+        </p>
+        <label>
+          <span>服务端地址</span>
+          <input
+            type="text"
+            value={bottleEndpoint}
+            placeholder="https://your-worker.workers.dev"
+            onChange={(e) => setBottleEndpoint(e.target.value)}
+            onBlur={() => {
+              if (bottle?.enabled) void toggleBottle(true)
+            }}
+          />
+        </label>
+        <label className="switch-row">
+          <input
+            type="checkbox"
+            checked={bottle?.enabled === true}
+            onChange={(e) => void toggleBottle(e.target.checked)}
+          />
+          <span className="switch-track"><i /></span>
+          <span className="switch-label">开启许愿瓶</span>
+        </label>
+        {bottle?.enabled && (
+          <div className="row">
+            <button className="btn" onClick={() => void window.api.openMail()}>
+              打开许愿瓶
+            </button>
+            <small className="inline-hint">
+              今天已放 {bottle.thrownToday}/{bottle.dailyLimit} 张
+            </small>
           </div>
         )}
       </section>

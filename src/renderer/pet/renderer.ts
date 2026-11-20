@@ -21,6 +21,8 @@ export interface SpriteRenderer {
   setClip(clip: ClipName): void
   /** 朝向：true = 朝右（素材默认朝右），false = 镜像朝左。正面视角忽略 */
   setFacing(right: boolean): void
+  /** 注视方向（-1..1），只影响瞳孔与轻微微移；没有 look 动作时退化为整体偏移 */
+  setGaze(dir: { x: number; y: number }): void
   /** 当前动作与视角（调试用） */
   current(): { clip: ClipName; view: SkinView }
   /** 每帧调用 */
@@ -82,6 +84,7 @@ function createRenderer(canvas: HTMLCanvasElement, skin: LoadedSkin): SpriteRend
 
   let clip: ClipName = 'idle'
   let facingRight = true
+  let gaze: { x: number; y: number } = { x: 0, y: 0 }
   let frame = 0
   let elapsed = 0
 
@@ -136,7 +139,10 @@ function createRenderer(canvas: HTMLCanvasElement, skin: LoadedSkin): SpriteRend
       ctx.translate(displayW, 0)
       ctx.scale(-1, 1)
     }
-    ctx.drawImage(image, sx, sy, frameSize.w, frameSize.h, 0, 0, displayW, displayH)
+    // 注视：整体轻微偏移（角色本身有 look 动作时，这里是叠加的微动）
+    const gx = gaze.x * displayW * 0.025
+    const gy = gaze.y * displayH * 0.02
+    ctx.drawImage(image, sx, sy, frameSize.w, frameSize.h, gx, gy, displayW, displayH)
     ctx.restore()
 
     // 调试信息挂到 canvas 数据集，e2e 与截图可以直接读
@@ -155,6 +161,9 @@ function createRenderer(canvas: HTMLCanvasElement, skin: LoadedSkin): SpriteRend
     },
     setFacing(right: boolean) {
       facingRight = right
+    },
+    setGaze(dir: { x: number; y: number }) {
+      gaze = dir
     },
     current() {
       const resolved = specOf(clip)

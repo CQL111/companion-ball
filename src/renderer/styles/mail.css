@@ -1,0 +1,120 @@
+/* mail.css - 许愿瓶（海面质感的深色面板） */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+#root { height: 100%; }
+html, body {
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(90% 45% at 20% 0%, rgba(90, 160, 220, 0.14) 0%, rgba(90, 160, 220, 0) 60%),
+    radial-gradient(70% 40% at 85% 10%, rgba(140, 120, 220, 0.1) 0%, transparent 60%),
+    linear-gradient(170deg, var(--bg-1) 0%, var(--bg-0) 60%);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  -webkit-user-select: none;
+  user-select: none;
+  overflow: hidden;
+}
+.mail { padding: 22px; height: 100%; overflow-y: auto; }
+.mail::-webkit-scrollbar { width: 6px; }
+.mail::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 3px; }
+
+.mail-header { margin-bottom: 18px; }
+h1 {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: linear-gradient(100deg, var(--text-1), #a8d4ff 60%, var(--accent-gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.mail-sub { color: var(--text-3); font-size: 12px; margin-top: 6px; line-height: 1.6; }
+
+.mail-card {
+  padding: 16px;
+  border-radius: var(--r-lg);
+  background: var(--glass-1);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-float);
+}
+.mail-card.center { text-align: center; }
+.mail-card + .mail-card { margin-top: 12px; }
+
+.mail-points {
+  margin: 0 0 14px 16px;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.9;
+}
+.mail-points li::marker { color: var(--accent-gold); }
+
+textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--glass-border);
+  color: var(--text-1);
+  padding: 10px;
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  resize: vertical;
+  outline: none;
+  user-select: text;
+}
+textarea:focus { border-color: var(--glass-hairline); }
+
+.mail-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.mail-row.center { justify-content: center; }
+.mail-count { color: var(--text-3); font-size: 11px; }
+.mail-sep { border: none; border-top: 1px solid var(--glass-hairline); margin: 16px 0 12px; }
+
+.mail-msg {
+  margin-bottom: 12px;
+  padding: 9px 12px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+}
+.mail-msg.ok { background: var(--info-bg); color: var(--info); }
+.mail-msg.err { background: var(--danger-bg); color: var(--danger); }
+
+.mail-big { font-size: 15px; margin-bottom: 8px; }
+.mail-hint { color: var(--text-3); font-size: 11.5px; line-height: 1.7; }
+.mail-from { color: var(--accent-gold); font-size: 12px; margin-bottom: 8px; }
+.mail-quote {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-left: 2px solid var(--accent-gold);
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  font-size: 13px;
+  line-height: 1.9;
+  user-select: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------- 按钮（与设置页同名 class，但本窗口独立引入 CSS） ---------- */
+.btn {
+  padding: 8px 14px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-1);
+  color: var(--text-1);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease, opacity var(--dur-fast) ease;
+}
+.btn:hover:not(:disabled) { background: var(--glass-2); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.primary {
+  background: linear-gradient(180deg, rgba(120, 180, 240, 0.28), rgba(90, 140, 220, 0.18));
+  border-color: rgba(140, 190, 255, 0.35);
+  color: #e8f2ff;
+}
+.btn.primary:hover:not(:disabled) { background: linear-gradient(180deg, rgba(120, 180, 240, 0.4), rgba(90, 140, 220, 0.26)); }
+.btn.ghost { background: transparent; color: var(--text-2); }
+
+.mail-hint-warn { color: var(--warning, #f0b060); }

@@ -10,9 +10,12 @@ import * as onlineConfig from './services/onlineConfig'
 import { logger } from './services/logger'
 import { handleAsk, resetChat } from './chat'
 import { extractMemories, bumpInteraction, ensureDailyDiary } from './remember'
+import * as mail from './mail'
+import { createMailWindow } from './mailWindow'
 import * as memory from '../core/memory'
 import * as notebook from '../core/notebook'
 import * as backup from '../core/backup'
+import * as mailbox from '../core/mailbox'
 import {
   store,
   resolveAiConfig,
@@ -79,6 +82,23 @@ function logIpcStart(channel: string, args: unknown[]): void {
     logger.info('ipc', `${channel} args=${summary.join(',')}`)
   } catch {
     /* ignore */
+  }
+}
+
+/** 许愿瓶状态视图：设置页与纸条窗口共用 */
+function bottleStatusView() {
+  const s = mail.bottleSettings()
+  const thrown = store.get('bottleThrownToday')
+  const now = new Date()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  const today = now.getFullYear() + '-' + m + '-' + d
+  return {
+    enabled: mail.isBottleEnabled(),
+    endpoint: s.endpoint,
+    canThrow: true,
+    thrownToday: thrown && thrown.day === today ? thrown.n : 0,
+    dailyLimit: mailbox.DAILY_BOTTLE_LIMIT,
   }
 }
 
@@ -347,6 +367,68 @@ export function registerIpc(): void {
     }
     logger.info('backup.import', `memories=${data.memories.length} diary=${data.notebook.entries.length}`)
     return { ok: true, stats: { memories: data.memories.length, diaryEntries: data.notebook.entries.length } }
+  })
+
+  // ---------- 许愿瓶（S3） ----------
+  handle(CH.bottleStatus, () => bottleStatusView())
+
+  handle(CH.bottleToggle, (_e, payload: unknown) => {
+    const p = (payload && typeof payload === 'object' ? payload : {}) as { enabled?: boolean; endpoint?: string }
+    const prev = mail.bottleSettings()
+    const next = {
+      ...prev,
+      enabled: p.enabled === true,
+      endpoint: typeof p.endpoint === 'string' ? p.endpoint.trim() : prev.endpoint,
+    }
+    store.set('bottle', next)
+    logger.info('bottle.toggle', `enabled=${next.enabled} endpoint=${next.endpoint ? 'set' : 'empty'}`)
+    return bottleStatusView()
+  })
+
+  handle(CH.bottleThrow, async (_e, body: unknown) => {
+    return mail.throwBottle(String(body ?? ''))
+  })
+
+  handle(CH.bottlePick, async (_e, force: unknown) => {
+    const r = await mail.catGoesOut(force === true)
+    if (r.ok && r.data) mail.noteBottleInNotebook('picked', r.data.body, r.data.alias)
+    return r
+  })
+
+  handle(CH.bottleReply, async (_e, bottleId: unknown, body: unknown) => {
+    const r = await mail.replyBottle(String(bottleId ?? ''), String(body ?? ''))
+    return r
+  })
+
+  handle(CH.bottleInbox, async () => {
+    const r = await mail.fetchInbox()
+    if (r.ok && r.data) {
+      for (const item of r.data) mail.noteBottleInNotebook('reply', item.replyBody, item.replyAlias)
+    }
+    return r
+  })
+
+  handle(CH.bottleReport, async (_e, target: unknown, reason: unknown) => {
+    const t = (target && typeof target === 'object' ? target : {}) as { bottleId?: string; replyId?: string }
+    const rr = ['spam', 'abuse', 'other'].includes(String(reason)) ? (String(reason) as 'spam' | 'abuse' | 'other') : 'other'
+    return mail.report(t, rr)
+  })
+
+  handle(CH.bottlePatrolNow, async () => {
+    if (!mail.isBottleEnabled()) return { ok: false, error: 'SERVICE_PAUSED', errorText: '许愿瓶还没开启' }
+    const r = await mail.patrolOnce()
+    if (r.found) {
+      if (windows.ball && !windows.ball.isDestroyed()) {
+        windows.ball.webContents.send('bottle-picked', { alias: r.alias })
+      }
+      return { ok: true, data: { alias: r.alias, body: r.body } }
+    }
+    return { ok: true, data: null, errorText: r.errorText }
+  })
+
+  handle(CH.openMail, () => {
+    createMailWindow()
+    return true
   })
 
   handle(CH.bumpInteraction, () => {

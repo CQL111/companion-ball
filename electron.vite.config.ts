@@ -46,6 +46,7 @@ export default defineConfig({
           consent: resolve(root, 'src/renderer/consent/index.html'),
           legal: resolve(root, 'src/renderer/legal/index.html'),
           notebook: resolve(root, 'src/renderer/notebook/index.html'),
+          mail: resolve(root, 'src/renderer/mail/index.html'),
         },
       },
     },

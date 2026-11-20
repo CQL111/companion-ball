@@ -34,6 +34,10 @@ export default function App(): React.ReactElement {
           <span>只有你主动聊天时，问题与最近几轮对话才会发送给你配置的模型服务。不配置 Key 也能正常使用。</span>
         </li>
         <li>
+          <b>许愿瓶默认关闭</b>
+          <span>开启后，你写给陌生人的纸条会发送到服务器（最多保留 7 天）。不开启则不产生任何请求。</span>
+        </li>
+        <li>
           <b>AI 内容仅供参考</b>
           <span>模型回答可能不准确，不构成医疗、法律或投资建议。</span>
         </li>

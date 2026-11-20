@@ -1,6 +1,6 @@
 {
   "name": "companion-ball",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "桌面陪伴 · 团子猫：常驻桌角的 AI 团子猫，可聊天、可拖拽",
   "main": "./out/main/index.js",
   "scripts": {
@@ -32,7 +32,8 @@
     "release:minor": "node scripts/release.js minor",
     "release:major": "node scripts/release.js major",
     "build:skin": "node scripts/build-skin.mjs",
-    "pack:skin": "node scripts/pack-skin.mjs"
+    "pack:skin": "node scripts/pack-skin.mjs",
+    "mock:bottle": "node scripts/mock-bottle-server.mjs"
   },
   "keywords": [
     "electron",

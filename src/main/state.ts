@@ -28,6 +28,7 @@ export const windows: {
   aiInput: BrowserWindow | null
   consent: BrowserWindow | null
   notebook: BrowserWindow | null
+  mail: BrowserWindow | null
   legal: BrowserWindow | null
   tray: Tray | null
 } = {
@@ -36,6 +37,7 @@ export const windows: {
   aiInput: null,
   consent: null,
   notebook: null,
+  mail: null,
   legal: null,
   tray: null,
 }

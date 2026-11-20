@@ -8,6 +8,8 @@ import { createBallWindow, createNotebookWindow, createSettingsWindow, getDefaul
 import { openAiInputWindow } from './windows'
 import { store } from './store'
 import { ensureDailyDiary } from './remember'
+import * as mail from './mail'
+import { createMailWindow } from './mailWindow'
 import { resourceFile } from './scripts'
 import type { Persona } from '../shared/types'
 
@@ -78,6 +80,25 @@ export function rebuildTrayMenu(): void {
       },
     },
     { label: '猫的笔记本', click: () => { ensureDailyDiary(); createNotebookWindow() } },
+    ...(mail.isBottleEnabled()
+      ? [
+          {
+            label: '让猫出门看看',
+            click: async () => {
+              const r = await mail.patrolOnce()
+              if (r.found) {
+                logger.info('bottle.tray', 'picked one')
+                if (windows.ball && !windows.ball.isDestroyed()) {
+                  windows.ball.webContents.send('bottle-picked', { alias: r.alias })
+                }
+              } else {
+                logger.info('bottle.tray', r.errorText || 'empty-handed')
+              }
+            },
+          },
+          { label: '许愿瓶...', click: () => createMailWindow() },
+        ]
+      : []),
     { label: '设置...', click: () => createSettingsWindow() },
     { type: 'separator' },
     {
