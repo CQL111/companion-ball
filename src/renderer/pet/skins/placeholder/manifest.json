@@ -1,0 +1,132 @@
+{
+  "id": "placeholder-cat",
+  "name": "占位团子猫",
+  "version": 1,
+  "engine": "atlas",
+  "size": {
+    "w": 48,
+    "h": 48
+  },
+  "frameSize": {
+    "w": 144,
+    "h": 144
+  },
+  "anchors": {
+    "front": {
+      "x": 24,
+      "y": 44
+    },
+    "side": {
+      "x": 24,
+      "y": 44
+    }
+  },
+  "clips": {
+    "idle": {
+      "view": "front",
+      "frames": 4,
+      "fps": 6,
+      "loop": true,
+      "row": 0
+    },
+    "tap": {
+      "view": "front",
+      "frames": 2,
+      "fps": 8,
+      "loop": false,
+      "row": 1
+    },
+    "sleep": {
+      "view": "front",
+      "frames": 2,
+      "fps": 2,
+      "loop": true,
+      "row": 2
+    },
+    "wake": {
+      "view": "front",
+      "frames": 4,
+      "fps": 10,
+      "loop": false,
+      "row": 3
+    },
+    "stretch": {
+      "view": "front",
+      "frames": 6,
+      "fps": 6,
+      "loop": false,
+      "row": 4
+    },
+    "groom": {
+      "view": "front",
+      "frames": 6,
+      "fps": 8,
+      "loop": false,
+      "row": 5
+    },
+    "annoyed": {
+      "view": "front",
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "row": 6
+    },
+    "dizzy": {
+      "view": "front",
+      "frames": 4,
+      "fps": 10,
+      "loop": true,
+      "row": 7
+    },
+    "walk": {
+      "view": "side",
+      "frames": 6,
+      "fps": 10,
+      "loop": true,
+      "row": 8
+    },
+    "climb": {
+      "view": "side",
+      "frames": 6,
+      "fps": 8,
+      "loop": true,
+      "row": 9
+    },
+    "hang": {
+      "view": "side",
+      "frames": 4,
+      "fps": 6,
+      "loop": true,
+      "row": 10
+    },
+    "fall": {
+      "view": "side",
+      "frames": 2,
+      "fps": 6,
+      "loop": true,
+      "row": 11
+    },
+    "land": {
+      "view": "side",
+      "frames": 4,
+      "fps": 10,
+      "loop": false,
+      "row": 12
+    },
+    "held": {
+      "view": "side",
+      "frames": 2,
+      "fps": 4,
+      "loop": true,
+      "row": 13
+    }
+  },
+  "fallbacks": {
+    "wake": "tap",
+    "turn": "idle"
+  },
+  "assets": {
+    "atlas": "cat.png",
+    "columns": 8
+  }
+}

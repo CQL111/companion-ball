@@ -18,9 +18,15 @@ import { pickBucket, pickQuip, rememberQuip, type QuipBucket, type QuipDatabase,
 import quipDbRaw from '../../data/quips.json'
 import { grabLoco, initLoco, releaseLoco, stepLoco, syncLocoPosition, type Bounds, type Loco } from '../../core/locomotion'
 import { playSound, setSoundEnabled } from './sound'
+import { clipForState, type ClipName } from '../../core/motion'
+import { loadSkin, type SpriteRenderer } from './renderer'
+// ?url 让 Vite 负责拷贝素材并给出正确地址（dev 与打包后都可用）
+import atlasUrl from './skins/placeholder/cat.png?url'
+import skinManifest from './skins/placeholder/manifest.json'
 
 const ball = document.getElementById('ball') as HTMLDivElement
 const ballInner = document.getElementById('ball-inner') as HTMLDivElement
+const canvas = document.getElementById('pet-canvas') as HTMLCanvasElement
 const bubble = document.getElementById('pet-bubble') as HTMLDivElement | null
 const petMenu = document.getElementById('pet-menu') as HTMLElement | null
 
@@ -38,14 +44,48 @@ let bubbleTimer = 0
 let animationsEnabled = true
 let lastPersistedAt = 0
 
+// ---------- 角色渲染（精灵图集） ----------
+let renderer: SpriteRenderer | null = null
+let currentClip: ClipName | null = null
+let justWokeUntil = 0
+
+/** 把「身体状态 + 情绪 + 原地动作」映射成动作名，交给渲染器 */
+function paintClip(): void {
+  if (!renderer) return
+  const plan = loco.plan
+  const action = plan && (plan.kind === 'stretch' || plan.kind === 'groom') ? plan.kind : undefined
+  const clip = clipForState(loco.state, petState.mood, {
+    action,
+    justWoke: Date.now() < justWokeUntil,
+  })
+  if (clip !== currentClip) {
+    currentClip = clip
+    renderer.setClip(clip)
+  }
+  renderer.setFacing(loco.facing > 0)
+  ball.setAttribute('data-clip', clip)
+}
+
 function paintMood(): void {
   ballInner.setAttribute('data-mood', petState.mood)
+  ball.setAttribute('data-mood', petState.mood)
+  paintClip()
 }
 
 function showBubble(text: string | null): void {
   if (!bubble || !text) return
   bubble.textContent = text
   bubble.classList.add('show')
+  // 先显示再量尺寸；贴边时把气泡平移回可视区，小三角反向补偿
+  requestAnimationFrame(() => {
+    bubble.style.setProperty('--bubble-shift', '0px')
+    const r = bubble.getBoundingClientRect()
+    const margin = 8
+    let shift = 0
+    if (r.left < margin) shift = margin - r.left
+    else if (r.right > window.innerWidth - margin) shift = window.innerWidth - margin - r.right
+    bubble.style.setProperty('--bubble-shift', `${Math.round(shift)}px`)
+  })
   clearTimeout(bubbleTimer)
   // 不打搅：气泡 3 秒自灭，不抢焦点
   bubbleTimer = window.setTimeout(() => bubble.classList.remove('show'), 3000)
@@ -78,6 +118,7 @@ function dispatch(event: PetEvent): void {
   petState = r.state
 
   if (moodChanged) paintMood()
+  if (r.trigger === 'wake') justWokeUntil = Date.now() + 900
   if (r.trigger) speak(pickBucket(r.trigger, event.now, petState.dragging), event.now)
   if (moodChanged || r.trigger) persistPetState()
   // S2：交互计数供日记使用（点击 / 拖动 / 唤醒才算，不是每秒 tick）
@@ -142,6 +183,8 @@ function locoFrame(now: number): void {
     if (r.cue === 'land') playSound('land')
     if (r.cue === 'soft') playSound('soft')
   }
+  paintClip()
+  renderer?.render(dtMs)
   requestAnimationFrame(locoFrame)
 }
 requestAnimationFrame(locoFrame)
@@ -484,6 +527,21 @@ paintMood()
     /* ignore */
   }
   applyPersona()
+
+  // 加载占位皮肤（图集 + manifest）；失败时角色不可见，但不影响其他功能
+  try {
+    const m = skinManifest as { frameSize?: { w: number; h: number }; assets?: { columns?: number } }
+    renderer = await loadSkin(canvas, {
+      manifest: skinManifest as never,
+      atlasUrl,
+      columns: m.assets?.columns,
+      frameSize: m.frameSize,
+    })
+    paintClip()
+    window.logger.info('ball.skin', 'placeholder loaded')
+  } catch (e) {
+    window.logger.error('ball.skin', 'load failed: ' + ((e as Error).message || e))
+  }
 
   // 恢复跨重启的情绪：上次交互时间 + 上次早安日期
   try {

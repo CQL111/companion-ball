@@ -114,8 +114,11 @@ try {
   const pet = list.find((t) => t.url.includes('/pet/'))
   check('团子猫窗口已加载', !!pet)
   if (pet) {
-    const hasCat = await waitFor(pet, `!!document.querySelector('#ball-inner .persona-cat')`)
-    check('宠物窗口渲染出 ball-inner', !!hasCat)
+    // v0.6.0：角色由精灵图集渲染到 canvas，检查画布真的有像素
+    const hasPixels = await waitFor(pet, `(() => { const c = document.querySelector('#pet-canvas'); if (!c) return 0; const d = c.getContext('2d').getImageData(0,0,c.width,c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 20) n++; return n; })()`)
+    check('宠物窗口从图集渲染出角色', Number(hasPixels) > 500, String(hasPixels) + ' px')
+    const clipName = await waitFor(pet, `document.querySelector('#pet-canvas')?.dataset.clip || ''`)
+    check('渲染器报告当前动作', ['idle','tap','sleep','wake','stretch','groom','annoyed','dizzy','walk','climb','hang','fall','land','held'].includes(String(clipName)), String(clipName))
     const menuCount = await waitFor(pet, `document.querySelectorAll('.menu-item').length || 0`)
     check('宠物窗口菜单入口存在', menuCount === 2)
     // S1：状态机渲染出 data-mood，且气泡节点存在

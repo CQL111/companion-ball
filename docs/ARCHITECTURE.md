@@ -71,7 +71,7 @@
                                │ window.api / window.logger
 ┌──────────────────────────────▼───────────────────────────────┐
 │ src/renderer/          渲染端                                   │
-│   pet/                 命令式 TS：拖拽 / 菜单 / 热区 / 预览      │
+│   pet/                 命令式 TS：拖拽 / 菜单 / 热区 / 图集渲染  │
 │   notebook/            React 19：猫的笔记本（S2）                │
 │   chat/                React 19：对话浮窗                       │
 │   settings/            React 19：设置面板                       │
@@ -91,6 +91,7 @@
 │   notebook.ts          每日日记 + Markdown 导出                  │
 │   backup.ts            全量导出 / 导入（不含 Key）               │
 │   locomotion.ts        走动 / 爬墙 / 天花板 / 抛掷物理（v0.5.0）  │
+│   motion.ts            动作契约：14 动作 × 两视角 + 换肤清单      │
 │   types.ts             领域类型（shared/types 从这里扩展）      │
 │   logger-types.ts      日志接口（平台层注入实现）               │
 └──────────────────────────────────────────────────────────────┘
@@ -251,7 +252,22 @@ renderer 消费：
 
 约束：睡觉 / 打盹 / 菜单打开 / 预览动画时 ；被按住时状态机完全不推进。
 
-### 8. 日志与自检
+### 8. 角色渲染与换肤（v0.6.0）
+
+```
+身体状态 + 情绪 + 原地动作
+  → core.motion.clipForState(loco, mood, { action, justWoke })  → ClipName
+  → renderer.setClip(clip) / setFacing(right)
+  → Canvas drawImage(图集第 row 行第 frame 列) → 锚点对齐 → 侧影可镜像
+```
+
+换皮肤只需要提供：
+- 一份 `SkinManifest`（每个动作的 view / 帧数 / fps / 行号 + 两个视角的锚点）
+- 一张图集
+
+渲染器不认识角色，只认识清单；以后接 Spine 时新增一个适配器，契约不动。
+
+### 9. 日志与自检
 
 ```
 renderer window.logger.* → send(log-*) → main registerLogIpc → logger.write
