@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.2.1] — 发布流程加固（2026-11-20）
+
+### 修复
+- **Release 重复创建**：`electron-builder --publish always` 在多个产物并发生成时会重复 POST
+  创建同名 tag 的 Release（v0.2.0 实际产生了 2 个 Release）。改用 `--publish never` 本地构建，
+  再由新增的 `scripts/publish-github.js` 按 tag 查找/创建 Release、逐个上传并校验资产
+- **资产缺失**：发布中断后仅剩 `blockmap` 一个资产；新脚本会校验每个产物是否远端存在，
+  缺失即退出码 1
+- **发布顺序**：先构建（产物在 `dist-public/<version>/`）再 tag/push，避免「有 tag 没有安装包」
+- **EBUSY**：`directories.output` 带版本号，Windows 残留进程锁住旧 `app.asar` 不再影响下一次打包
+- Release notes 由脚本从 CHANGELOG 读取写入，不再依赖 `gh` CLI
+
+### 安全性
+- 内置 Key 版（含真实 Key）**永不发布到 GitHub Release**；需要时本机 `npm run build:key`
+  （v0.2.0 发布时已执行此策略）
+
+### 验证
+- `npm test` → 15 通过 + `check:core` 通过
+- `npm run typecheck` → 无错误
+- `npm run test:e2e` → 9/9 通过（连跑两次稳定）
+- `node scripts/publish-github.js 0.2.0 out-public-2` → 复用已有 Release、重传并校验 3 个资产全部通过
+  （幂等性验证）
+- GitHub Release v0.2.0 现有资产：安装包 73.6 MB + blockmap 0.1 MB + latest.yml
+
 ## [0.2.0] — 架构迁移：electron-vite + TypeScript + React 19（2026-11-20）
 
 ### 流程（本次新增的变更纪律）

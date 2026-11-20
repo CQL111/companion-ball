@@ -4,6 +4,7 @@ dist
 /out
 /out-release
 /out-release-key
+/dist-public
 .env
 .env.local
 !.env.example

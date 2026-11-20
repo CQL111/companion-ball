@@ -96,7 +96,20 @@ run('npm run build');
 console.log('\n🧭 功能测试（真实启动应用）...');
 run('node tests/e2e/smoke.mjs');
 
-// ---------- 7. 提交 + tag + push ----------
+// ---------- 7. 构建安装包（不在这里上传） ----------
+// 产物目录带版本号：Windows 上残留进程会锁住旧产物里的 app.asar，
+// 复用同一个 out-public/ 会在下次打包时报 EBUSY。
+const distDir = path.join(ROOT, 'dist-public', version);
+console.log(`\n🚀 构建公开版 → ${path.relative(ROOT, distDir)}`);
+run(`electron-builder --win --publish never --config electron-builder.public.yml -c.directories.output="${distDir}"`);
+
+// 内置 Key 版只在本地构建，绝不发布到 GitHub（见文件头部的安全边界说明）
+if (fs.existsSync(path.join(ROOT, 'bundled-ai.json'))) {
+  console.log('\n🔒 检测到 bundled-ai.json：内置 Key 版不随 Release 发布');
+  console.log('   需要个人版安装包时，在本机执行：npm run build:key');
+}
+
+// ---------- 8. 提交 + tag + push ----------
 console.log('\n🏷️ 提交版本变更并打 tag...');
 run('git add -A');
 try {
@@ -109,34 +122,11 @@ run(`git tag -a ${tagName} -m "release ${tagName}"`);
 console.log('\n📤 推送到远程...');
 run('git push origin HEAD --follow-tags');
 
-// ---------- 8. 构建安装包并发布 ----------
-const notesFile = path.join(ROOT, '.release-notes.md');
-fs.writeFileSync(notesFile, `# ${tagName}\n\n${section}\n`, 'utf8');
-
-try {
-  console.log('\n🚀 构建公开版并发布...');
-  run('electron-builder --win --publish always --config electron-builder.public.yml');
-
-  // 内置 Key 版只在本地构建，绝不发布到 GitHub（见文件头部的安全边界说明）
-  if (fs.existsSync(path.join(ROOT, 'bundled-ai.json'))) {
-    console.log('\n🔒 检测到 bundled-ai.json：内置 Key 版不随 Release 发布');
-    console.log('   需要个人版安装包时，在本机执行：npm run build:key');
-  }
-
-  console.log('\n📄 写入 Release notes（来自 CHANGELOG）...');
-  try {
-    run(`gh release edit ${tagName} --notes-file .release-notes.md`, { stdio: 'ignore' });
-    console.log('   ✅ Release notes 已更新');
-  } catch {
-    console.log('   ⚠️ gh CLI 不可用，跳过 notes 更新（可手动粘贴 CHANGELOG 片段）');
-  }
-} finally {
-  try {
-    fs.unlinkSync(notesFile);
-  } catch {
-    /* ignore */
-  }
-}
+// ---------- 9. 上传并校验 Release ----------
+// 不用 electron-builder --publish always：它会在并发生成产物时重复创建同名 Release，
+// 且部分失败会留下只传了一半资产的 Release。见 scripts/publish-github.js。
+console.log('\n📤 上传 Release 资产并校验...');
+run(`node scripts/publish-github.js ${version} "${path.relative(ROOT, distDir)}"`);
 
 console.log('\n✅ 发布完成：');
 console.log(`   https://github.com/CQL111/companion-ball/releases/tag/${tagName}`);

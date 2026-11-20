@@ -42,10 +42,15 @@ npm run release:minor     # 或 release:patch / release:major
 ```
 工作区干净 → tag 不存在 → CHANGELOG 有该版本条目且非空
   → npm test → npm run typecheck → npm run build → node tests/e2e/smoke.mjs
+  → electron-builder 公开版（--publish never，产物在 dist-public/<version>/）
   → git commit + git tag -a vX.Y.Z → git push --follow-tags
-  → electron-builder 公开版（--publish always）
-  → Release notes 取自 CHANGELOG
+  → node scripts/publish-github.js <version>   # 建 Release、上传、校验资产
 ```
+
+**为什么上传要单独一个脚本**：`electron-builder --publish always` 在多个产物并发生成时
+会重复创建同名 tag 的 Release，且中断后会留下只传了一半资产的 Release（v0.2.0 踩到过）。
+`scripts/publish-github.js` 按 tag 幂等处理：已有 Release 就复用、同名资产先删再传，
+最后逐个校验资产是否齐全，不全则退出码 1。
 
 ### 安全边界：内置 Key 版永不发布
 
@@ -92,6 +97,7 @@ S 阶段与版本对应关系见 `docs/ROADMAP.md` 第二节。
 | 情况 | 处理 |
 |---|---|
 | 门禁失败（测试/类型/CHANGELOG） | 修复后重新提交，再跑 `npm run release:*` |
-| 已推送 tag 但构建失败 | 修复后：`git tag -d vX.Y.Z && git push origin :refs/tags/vX.Y.Z`，重新发版 |
-| Release 资产缺失 | 重新执行 `electron-builder --publish always --config <yml>`（同一 tag 会追加到已有 Release） |
+| 已推送 tag 但构建失败 | **不要删 tag**：修复后在本机重新构建，再执行 `node scripts/publish-github.js <version> <distDir>` 补传 |
+| Release 资产缺失 / 只传了一部分 | 同上，重跑 `publish-github.js`（幂等，同名资产会先删再传） |
+| 出现重复的 Release | 保留有资产的、删除空的那个（GitHub API `DELETE /releases/:id`） |
 | 已经发布但发现严重 bug | **不发补丁版覆盖**：升 patch 版本重新发布，旧版本保留可追溯 |
