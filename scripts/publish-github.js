@@ -32,10 +32,18 @@ const HEADERS = {
 };
 
 function readNotes() {
-  const cl = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
-  const esc = version.replace(/\./g, '\\.');
-  const m = new RegExp(`^## \\[?${esc}\\]?[^\\n]*\\n([\\s\\S]*?)(?=^## \\[|\\s*$)`, 'm').exec(cl);
-  return m ? m[1].trim() : '';
+  // 按行扫描：找到以 "## " 开头的版本标题，取其后的正文直到下一个 "## " 标题。
+  // 不用跨行正则的 lookahead（在 JS 多行模式下容易误判为空）。
+  const lines = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8').split(/\r?\n/);
+  const header = new RegExp(`^## \\[?${version.replace(/\./g, '\\.')}\\]?`);
+  const start = lines.findIndex((l) => header.test(l));
+  if (start === -1) return '';
+  const body = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^## /.test(lines[i])) break;
+    body.push(lines[i]);
+  }
+  return body.join('\n').trim();
 }
 
 async function api(pathname, init = {}) {

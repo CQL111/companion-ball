@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.2] — Release notes 提取修复（2026-11-20）
+
+### 修复
+- `publish-github.js` 的 CHANGELOG 段落提取在「本版本标题后紧跟另一个标题」时返回空串
+  （v0.2.1 的 Release notes 曾为空，已手动补上）；改为按行扫描，不再使用跨行 lookahead
+
+### 验证
+- `npm test` → 15 通过 + `check:core` 通过
+- 发布后检查 v0.2.2 Release notes 非空
+
 ## [0.2.1] — 发布流程加固（2026-11-20）
 
 ### 修复
