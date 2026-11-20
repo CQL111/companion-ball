@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { LlmStatus, LocalModelsResult, OnlineAiConfigView } from '../../shared/types'
+import type { LlmStatus, LocalModelsResult, MemoryListResult, OnlineAiConfigView } from '../../shared/types'
 
 type StatusType = '' | 'ok' | 'err' | 'info'
 interface StatusMsg {
@@ -30,6 +30,8 @@ export default function App(): React.ReactElement {
   const [animations, setAnimations] = useState(true)
   const [petName, setPetName] = useState('')
   const [nameSaved, setNameSaved] = useState('')
+  const [mem, setMem] = useState<MemoryListResult | null>(null)
+  const [memStatus, setMemStatus] = useState('')
   const [animHint, setAnimHint] = useState('')
   const [previewing, setPreviewing] = useState(false)
 
@@ -80,6 +82,11 @@ export default function App(): React.ReactElement {
         setPetName(pet?.name || '')
       } catch {
         /* 忽略：名字为空即可 */
+      }
+      try {
+        setMem(await window.api.getMemories())
+      } catch {
+        /* 忽略：记忆不可用时隐藏列表 */
       }
       await refreshLlmStatus()
       await loadOnline()
@@ -211,6 +218,39 @@ export default function App(): React.ReactElement {
     }
   }
 
+  // ---------- 记忆 ----------
+  const refreshMemories = async (): Promise<void> => {
+    setMem(await window.api.getMemories())
+  }
+  const deleteMemory = async (id: string): Promise<void> => {
+    setMem(await window.api.deleteMemory(id))
+  }
+  const clearMemories = async (): Promise<void> => {
+    setMem(await window.api.clearMemories())
+  }
+  const toggleMemory = async (enabled: boolean): Promise<void> => {
+    await window.api.setMemoryEnabled(enabled)
+    await refreshMemories()
+  }
+
+  // ---------- 备份 ----------
+  const exportBackup = async (): Promise<void> => {
+    const r = await window.api.exportBackup()
+    if (r.ok) setMemStatus('已导出全部数据')
+    else if (!r.canceled) setMemStatus(r.error || '导出失败')
+  }
+  const importBackup = async (): Promise<void> => {
+    const r = await window.api.importBackup()
+    if (r.ok) {
+      setMemStatus(`已导入：${r.stats?.memories ?? 0} 条记忆、${r.stats?.diaryEntries ?? 0} 篇日记`)
+      await refreshMemories()
+      const pet = await window.api.getConfig('pet')
+      setPetName(pet?.name || '')
+    } else if (!r.canceled) {
+      setMemStatus(r.error || '导入失败')
+    }
+  }
+
   // ---------- 渲染 ----------
   const llmText = !llm
     ? '模型状态检测失败'
@@ -332,6 +372,61 @@ export default function App(): React.ReactElement {
           </button>
         </div>
         <small id="pet-name-hint">{nameSaved || '不超过 16 个字，留空表示不改'}</small>
+      </section>
+
+      <section className="section">
+        <h2>它记得什么</h2>
+        <p className="hint">
+          只在这台电脑上。关掉就不再抽取新的；已有记忆可以逐条删除。
+          {mem ? `（${mem.memories.length}/${mem.max}）` : ''}
+        </p>
+        <label className="switch-row">
+          <input
+            type="checkbox"
+            checked={mem?.enabled !== false}
+            onChange={(e) => void toggleMemory(e.target.checked)}
+          />
+          <span className="switch-track"><i /></span>
+          <span className="switch-label">让它记住我们说过的事</span>
+        </label>
+
+        {mem && mem.memories.length > 0 ? (
+          <ul className="mem-list">
+            {mem.memories.map((m) => (
+              <li key={m.id} className="mem-item">
+                <span>{m.text}</span>
+                <button className="mem-del" onClick={() => void deleteMemory(m.id)} title="删除这条记忆">
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="hint">还没有记忆。多聊几次，它会开始记住一些事。</p>
+        )}
+        {mem && mem.memories.length > 0 && (
+          <div className="row">
+            <button className="btn ghost" onClick={() => void clearMemories()}>
+              全部忘记
+            </button>
+          </div>
+        )}
+      </section>
+
+      <section className="section">
+        <h2>数据备份</h2>
+        <p className="hint">
+          导出名字、记忆、笔记本与聊天记录（不含 API Key）。换电脑或重装时用它恢复。
+        </p>
+        <div className="row">
+          <button className="btn" onClick={() => void exportBackup()}>
+            导出全部数据
+          </button>
+          <button className="btn" onClick={() => void importBackup()}>
+            导入备份
+          </button>
+        </div>
+        {memStatus && <small>{memStatus}</small>}
       </section>
 
       <section className="section">

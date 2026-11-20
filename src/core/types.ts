@@ -44,6 +44,9 @@ export interface ScreenInfo {
   y: number
 }
 
+import type { Memory } from './memory'
+import type { Notebook } from './notebook'
+
 export interface PetSettings {
   /** 起名；空表示用户还没起名 */
   name: string
@@ -51,6 +54,11 @@ export interface PetSettings {
   lastInteractAt: number
   /** 上次说早安的本地日期（YYYY-MM-DD） */
   lastGreetDate: string
+  /** 上次写日记的本地日期（toDateString 格式）；S2 */
+  lastDiaryDate?: string
+  /** 当日交互次数（用于日记素材）；S2 */
+  lastInteractDay?: string
+  interactionsToday?: number
 }
 
 export interface StoreShape {
@@ -64,6 +72,12 @@ export interface StoreShape {
   consentVersion: number
   animations: boolean
   pet: PetSettings
+  /** 长期记忆（S2）；只在本地，上限见 core/memory.ts */
+  memories: Memory[]
+  /** 猫的笔记本（S2） */
+  notebook: Notebook
+  /** 记忆抽取开关（默认开） */
+  memoryEnabled: boolean
 }
 
 export type ConfigKey = keyof StoreShape

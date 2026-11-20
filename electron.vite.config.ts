@@ -45,6 +45,7 @@ export default defineConfig({
           settings: resolve(root, 'src/renderer/settings/index.html'),
           consent: resolve(root, 'src/renderer/consent/index.html'),
           legal: resolve(root, 'src/renderer/legal/index.html'),
+          notebook: resolve(root, 'src/renderer/notebook/index.html'),
         },
       },
     },

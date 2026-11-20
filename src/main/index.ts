@@ -15,6 +15,7 @@ import { getLogWatcher, startWatcher } from './diagnostics'
 import { registerIpc, registerLogIpc } from './ipc'
 import { startCursorPolling, stopCursorPolling } from './cursor'
 import { registerShortcut } from './shortcut'
+import { ensureDailyDiary } from './remember'
 
 // Windows 通知必须先设 appId（在 ready 之前）
 app.setAppUserModelId('com.companion.ball')
@@ -63,6 +64,9 @@ app.whenReady().then(() => {
     applyAutoStart(store.get('autoStart') === true)
     startCursorPolling()
     startWatcher()
+    // S2：启动时补写今天的日记，之后每小时检查一次（跨天/长时间运行）
+    ensureDailyDiary()
+    setInterval(() => ensureDailyDiary(), 60 * 60 * 1000)
     setTimeout(() => {
       runSelfCheck({
         logWatcher: getLogWatcher(),

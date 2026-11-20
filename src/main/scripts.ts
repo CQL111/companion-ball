@@ -24,3 +24,10 @@ export function resourceFile(name: string): string {
   }
   return path.join(appRoot(), 'resources', name)
 }
+
+/** 加载渲染端页面，可选 query（法律文档用） */
+export function loadRenderer(win: Electron.BrowserWindow, name: string, search?: string): void {
+  const file = rendererFile(name)
+  if (search) win.loadFile(file, { search })
+  else win.loadFile(file)
+}

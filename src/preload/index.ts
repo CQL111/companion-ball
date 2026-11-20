@@ -20,6 +20,18 @@ const api: CompanionApi = {
   setPersona: (name) => ipcRenderer.invoke(CH.setPersona, name),
   setPetName: (name) => ipcRenderer.invoke(CH.setPetName, name),
 
+  // 笔记本 / 记忆 / 备份（S2）
+  openNotebook: () => ipcRenderer.invoke(CH.openNotebook),
+  getNotebookView: () => ipcRenderer.invoke(CH.getNotebookView),
+  exportNotebookMarkdown: () => ipcRenderer.invoke(CH.exportNotebookMarkdown),
+  getMemories: () => ipcRenderer.invoke(CH.getMemories),
+  deleteMemory: (id) => ipcRenderer.invoke(CH.deleteMemory, id),
+  clearMemories: () => ipcRenderer.invoke(CH.clearMemories),
+  setMemoryEnabled: (enabled) => ipcRenderer.invoke(CH.setMemoryEnabled, enabled),
+  exportBackup: () => ipcRenderer.invoke(CH.exportBackup),
+  importBackup: () => ipcRenderer.invoke(CH.importBackup),
+  bumpInteraction: () => ipcRenderer.invoke(CH.bumpInteraction),
+
   savePosition: (x, y) => ipcRenderer.invoke(CH.savePosition, x, y),
   updateBallPos: (x, y) => ipcRenderer.invoke(CH.updateBallPos, x, y),
   getScreenInfo: () => ipcRenderer.invoke(CH.getScreenInfo),

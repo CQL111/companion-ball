@@ -1,13 +1,28 @@
 // ipc.ts - IPC 注册（按域拆分；入参用 zod 校验）
 
-import { app, ipcMain, screen } from 'electron'
+import fs from 'node:fs'
+import path from 'node:path'
+import { app, dialog, ipcMain, screen } from 'electron'
 import { z } from 'zod'
 import * as ai from './services/ai'
 import * as localLLM from './services/localLLM'
 import * as onlineConfig from './services/onlineConfig'
 import { logger } from './services/logger'
 import { handleAsk, resetChat } from './chat'
-import { store, resolveAiConfig, resolveOnline } from './store'
+import { extractMemories, bumpInteraction, ensureDailyDiary } from './remember'
+import * as memory from '../core/memory'
+import * as notebook from '../core/notebook'
+import * as backup from '../core/backup'
+import {
+  store,
+  resolveAiConfig,
+  resolveOnline,
+  getMemories,
+  setMemories,
+  getNotebook,
+  setNotebook,
+  isMemoryEnabled,
+} from './store'
 import { state, windows } from './state'
 import {
   AGREEMENT_VERSION,
@@ -15,13 +30,14 @@ import {
   createBallWindow,
   createLegalWindow,
   createSettingsWindow,
+  createNotebookWindow,
   needsConsent,
   openAiInputWindow,
   persistBallPosition,
 } from './windows'
 import { PERSONAS, broadcastPersona, rebuildTrayMenu } from './tray'
 import { CH, EV } from '../shared/channels'
-import { configKeySchema, localModelSchema, petNameSchema, rectSchema } from '../shared/ipc'
+import { configKeySchema, localModelSchema, memoryIdSchema, petNameSchema, rectSchema } from '../shared/ipc'
 import type { AiConfig, Persona } from '../shared/types'
 
 // 包装 ipcMain.handle：打入口日志 + 异常兜底
@@ -238,6 +254,103 @@ export function registerIpc(): void {
       windows.consent.removeAllListeners('close')
       windows.consent.close()
     }
+    return true
+  })
+
+  // ---------- 猫的笔记本 / 记忆 / 备份（S2） ----------
+  handle(CH.openNotebook, () => {
+    ensureDailyDiary()
+    createNotebookWindow()
+    return true
+  })
+
+  handle(CH.getNotebookView, () => ({
+    entries: notebook.recentEntries(getNotebook(), 60).map((e) => ({ date: e.date, lines: e.lines })),
+  }))
+
+  handle(CH.exportNotebookMarkdown, async () => {
+    const md = notebook.toMarkdown(getNotebook())
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: '导出笔记本',
+      defaultPath: '猫的笔记本-' + new Date().toISOString().slice(0, 10) + '.md',
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+    })
+    if (canceled || !filePath) return { ok: false, canceled: true }
+    fs.writeFileSync(filePath, md, 'utf8')
+    logger.info('notebook.export', 'markdown saved')
+    return { ok: true, path: filePath }
+  })
+
+  handle(CH.getMemories, () => {
+    const list = getMemories().slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    return { enabled: isMemoryEnabled(), max: memory.MAX_MEMORIES, memories: list }
+  })
+
+  handle(CH.deleteMemory, (_e, id: unknown) => {
+    const parsed = memoryIdSchema.safeParse(id)
+    if (parsed.success) {
+      setMemories(memory.removeMemory(getMemories(), parsed.data))
+      logger.info('memory.delete', 'one removed')
+      ensureDailyDiary()
+    }
+    const list = getMemories().slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    return { enabled: isMemoryEnabled(), max: memory.MAX_MEMORIES, memories: list }
+  })
+
+  handle(CH.clearMemories, () => {
+    setMemories([])
+    logger.info('memory.clear', 'all removed')
+    return { enabled: isMemoryEnabled(), max: memory.MAX_MEMORIES, memories: [] }
+  })
+
+  handle(CH.setMemoryEnabled, (_e, enabled: unknown) => {
+    store.set('memoryEnabled', enabled !== false)
+    logger.info('memory.enabled', String(enabled !== false))
+    return true
+  })
+
+  handle(CH.exportBackup, async () => {
+    const payload = backup.exportBackup({
+      petName: store.get('pet')?.name || '',
+      memories: getMemories(),
+      notebook: getNotebook(),
+      agentChat: { messages: store.get('agentChat')?.messages || [], updatedAt: store.get('agentChat')?.updatedAt || 0 },
+    })
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: '导出全部数据',
+      defaultPath: 'companion-ball-backup-' + new Date().toISOString().slice(0, 10) + '.json',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    })
+    if (canceled || !filePath) return { ok: false, canceled: true }
+    fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf8')
+    logger.info('backup.export', 'saved')
+    return { ok: true, path: filePath }
+  })
+
+  handle(CH.importBackup, async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: '导入数据备份',
+      properties: ['openFile'],
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    })
+    if (canceled || !filePaths.length) return { ok: false, canceled: true }
+    const raw = fs.readFileSync(filePaths[0]!, 'utf8')
+    const parsed = backup.parseBackup(raw)
+    if (!parsed.ok || !parsed.data) return { ok: false, error: parsed.error || '备份无法解析' }
+    const data = parsed.data
+    const pet = store.get('pet') || { name: '', lastInteractAt: 0, lastGreetDate: '' }
+    store.set('pet', { ...pet, name: data.petName || pet.name })
+    setMemories(data.memories)
+    setNotebook(data.notebook)
+    if (data.agentChat) {
+      store.set('agentChat', { messages: data.agentChat.messages, updatedAt: data.agentChat.updatedAt })
+    }
+    logger.info('backup.import', `memories=${data.memories.length} diary=${data.notebook.entries.length}`)
+    return { ok: true, stats: { memories: data.memories.length, diaryEntries: data.notebook.entries.length } }
+  })
+
+  handle(CH.bumpInteraction, () => {
+    bumpInteraction()
     return true
   })
 

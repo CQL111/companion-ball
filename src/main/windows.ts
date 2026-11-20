@@ -226,6 +226,35 @@ export function openAiInputWindow(): void {
   sendAiInputFocus(win)
 }
 
+// ---------- 猫的笔记本 ----------
+export function createNotebookWindow(): BrowserWindow {
+  if (windows.notebook && !windows.notebook.isDestroyed()) {
+    windows.notebook.show()
+    windows.notebook.focus()
+    return windows.notebook
+  }
+  const win = new BrowserWindow({
+    width: 560,
+    height: 720,
+    minWidth: 420,
+    minHeight: 480,
+    transparent: false,
+    frame: true,
+    title: '猫的笔记本',
+    backgroundColor: '#141019',
+    show: false,
+    webPreferences: { contextIsolation: true, nodeIntegration: false, preload: preloadPath },
+  })
+  windows.notebook = win
+  win.setMenuBarVisibility(false)
+  win.loadFile(rendererFile('notebook'))
+  win.once('ready-to-show', () => win.show())
+  win.on('closed', () => {
+    windows.notebook = null
+  })
+  return win
+}
+
 // ---------- 协议同意 ----------
 export function createConsentWindow(): BrowserWindow {
   if (windows.consent && !windows.consent.isDestroyed()) {

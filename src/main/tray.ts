@@ -4,9 +4,10 @@ import { app, dialog, Menu, nativeImage, shell, Tray } from 'electron'
 import { logger } from './services/logger'
 import { clearAll as clearAllLogs, getLevel, setLevel, getLogDir } from './services/logger'
 import { state, windows } from './state'
-import { createBallWindow, createSettingsWindow, getDefaultPosition } from './windows'
+import { createBallWindow, createNotebookWindow, createSettingsWindow, getDefaultPosition } from './windows'
 import { openAiInputWindow } from './windows'
 import { store } from './store'
+import { ensureDailyDiary } from './remember'
 import { resourceFile } from './scripts'
 import type { Persona } from '../shared/types'
 
@@ -76,6 +77,7 @@ export function rebuildTrayMenu(): void {
         openAiInputWindow()
       },
     },
+    { label: '猫的笔记本', click: () => { ensureDailyDiary(); createNotebookWindow() } },
     { label: '设置...', click: () => createSettingsWindow() },
     { type: 'separator' },
     {

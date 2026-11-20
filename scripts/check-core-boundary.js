@@ -11,6 +11,8 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const CORE_DIR = path.join(ROOT, 'src', 'core');
+// src/data/ 是纯 JSON 内容资产（台词、人格卡），零依赖，允许 core 只读引用
+const DATA_DIR = path.join(ROOT, 'src', 'data');
 
 // 禁止的 require：Electron 与 Node 平台模块
 const FORBIDDEN_MODULES = [
@@ -74,7 +76,9 @@ function checkFile(file) {
     if (mod.startsWith('.')) {
       // 相对路径视为 core 内部依赖，但不得跳出 core/
       const resolved = path.resolve(path.dirname(file), mod);
-      if (!resolved.startsWith(CORE_DIR + path.sep) && resolved !== CORE_DIR) {
+      const inCore = resolved.startsWith(CORE_DIR + path.sep) || resolved === CORE_DIR;
+      const inData = resolved.startsWith(DATA_DIR + path.sep) && resolved.endsWith('.json');
+      if (!inCore && !inData) {
         const line = src.slice(0, index).split('\n').length;
         problems.push({ line, msg: `${kind} 跳出 core：${mod}` });
       }

@@ -62,6 +62,8 @@ export interface RunAgentOptions {
   aiConfig: AiConfig
   ctx?: Record<string, unknown>
   logger?: Logger
+  /** S2 起由 persona.composeSystemPrompt 生成（人格 + 记忆）；缺省用内置 SYSTEM_PROMPT */
+  systemPrompt?: string
   callLLM: CallLlm
   onProgress?: (info: { tool: string; label: string }) => void
 }
@@ -71,6 +73,8 @@ export interface RunAgentResult {
   toolsUsed: string[]
   usage: Required<LlmUsage>
   history: AgentMessage[]
+  /** 本轮用户消息，用于 S2 记忆抽取（异步，不阻塞回复） */
+  userQuery: string
 }
 
 function compact(obj: unknown): string {
@@ -124,6 +128,7 @@ export async function runAgent({
   aiConfig,
   ctx = {},
   logger,
+  systemPrompt,
   callLLM,
   onProgress,
 }: RunAgentOptions): Promise<RunAgentResult> {
@@ -135,7 +140,7 @@ export async function runAgent({
   const labels = TOOL_LABELS
 
   const messages: AgentMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt || SYSTEM_PROMPT },
     ...trimByUserTurns(history || []),
     { role: 'user', content: q },
   ]
@@ -172,6 +177,7 @@ export async function runAgent({
         toolsUsed,
         usage: usageTotal,
         history: trimByUserTurns(messages.filter((m) => m.role !== 'system')),
+        userQuery: q,
       }
     }
 

@@ -142,6 +142,22 @@ try {
   check('设置窗口打开并完成 React 渲染', !!settings && !!settingsReady)
   check('对话浮窗打开并完成 React 渲染', !!chat && !!chatReady)
 
+  // S2：笔记本窗口 + 记忆 / 备份接口
+  if (pet) {
+    await evalIn(pet, 'window.api.openNotebook()')
+    await sleep(2000)
+  }
+  list = await fetchTargets()
+  const notebook = list.find((t) => t.url.includes('/notebook/'))
+  const nbReady = notebook ? await waitFor(notebook, `!!document.querySelector('.notebook h1')`) : false
+  check('笔记本窗口打开并完成 React 渲染', !!notebook && !!nbReady)
+  if (pet) {
+    const mem = await evalIn(pet, 'window.api.getMemories()')
+    check('记忆接口可用且默认开启', !!mem && mem.enabled === true && Array.isArray(mem.memories), JSON.stringify(mem && mem.max))
+    const nb = await evalIn(pet, 'window.api.getNotebookView()')
+    check('笔记本接口可用', !!nb && Array.isArray(nb.entries))
+  }
+
   if (chat) {
     const hasKey = !!(process.env.DEEPSEEK_API_KEY || fs.existsSync(path.join(ROOT, '.env')))
     if (hasKey) {

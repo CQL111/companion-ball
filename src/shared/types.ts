@@ -1,5 +1,9 @@
 // 跨进程共享类型：领域类型从 core 重新导出，这里只增加平台契约（IPC / 视图模型 / window 注入）。
 
+export type { Memory } from '../core/memory'
+export type { Notebook, DiaryEntry } from '../core/notebook'
+export type { BackupFile } from '../core/backup'
+
 export type {
   AgentChat,
   AgentMessage,
@@ -7,6 +11,7 @@ export type {
   AiConfig,
   AiSource,
   ConfigKey,
+
   Persona,
   PetSettings,
   Position,
@@ -92,6 +97,36 @@ export interface AgentProgressPayload {
   label?: string
 }
 
+export interface NotebookView {
+  entries: Array<{ date: string; lines: string[] }>
+}
+
+export interface MemoryView {
+  id: string
+  createdAt: string
+  text: string
+}
+
+export interface MemoryListResult {
+  enabled: boolean
+  max: number
+  memories: MemoryView[]
+}
+
+export interface ExportResult {
+  ok: boolean
+  path?: string
+  canceled?: boolean
+  error?: string
+}
+
+export interface ImportResult {
+  ok: boolean
+  canceled?: boolean
+  error?: string
+  stats?: { memories: number; diaryEntries: number }
+}
+
 export interface ResetChatResult {
   ok: boolean
   messages: AgentMessage[]
@@ -105,6 +140,18 @@ export interface CompanionApi {
   getPersona(): Promise<Persona>
   setPersona(name: Persona): Promise<Persona>
   setPetName(name: string): Promise<string>
+
+  // 笔记本 / 记忆 / 备份（S2）
+  openNotebook(): Promise<boolean>
+  getNotebookView(): Promise<NotebookView>
+  exportNotebookMarkdown(): Promise<ExportResult>
+  getMemories(): Promise<MemoryListResult>
+  deleteMemory(id: string): Promise<MemoryListResult>
+  clearMemories(): Promise<MemoryListResult>
+  setMemoryEnabled(enabled: boolean): Promise<boolean>
+  exportBackup(): Promise<ExportResult>
+  importBackup(): Promise<ImportResult>
+  bumpInteraction(): Promise<boolean>
 
   savePosition(x: number, y: number): Promise<Position | null>
   updateBallPos(x: number, y: number): Promise<boolean>

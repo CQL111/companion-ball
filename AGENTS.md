@@ -44,9 +44,9 @@
 | `src/renderer/pet/` | 团子猫（**命令式 TS，不引入 React**） | DOM |
 | `src/renderer/{chat,settings,consent,legal}/` | React 19 窗口 | DOM |
 | `src/renderer/styles/` | tokens + 各窗口 CSS（无 CSS 框架） | — |
-| `src/core/` | 领域：对话循环、状态机（S1）、记忆 / 笔记本（S2） | **零** |
+| `src/core/` | 领域：对话循环、状态机、人格卡、记忆、笔记本、备份 | **零** |
 | `src/shared/` | 跨进程契约：通道名、zod schema、类型 | 零（ipc.ts 用 zod） |
-| `src/data/` | 内容资产：台词、人格卡、模板（S1 起） | 零 |
+| `src/data/` | 内容资产：台词库、人格卡（core 可只读引用 JSON） | 零 |
 
 依赖方向单向：`renderer / main → shared → core`。完整说明见 `docs/ARCHITECTURE.md` 第三节。
 
@@ -96,6 +96,9 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 | 你要改… | 去 |
 |---|---|
 | 角色表现、拖拽、菜单、热区 | `src/renderer/pet/pet.ts` + `styles/ball.css` + `pet/index.html` |
+| 情绪 / 台词 / 人格 / 记忆 / 日记 | `src/core/{petState,quips,persona,memory,notebook}.ts` + `src/data/*.json` |
+| 记忆抽取与日记编排 | `src/main/remember.ts` |
+| 笔记本窗口 | `src/renderer/notebook/App.tsx` |
 | 主进程入口、启动顺序 | `src/main/index.ts` |
 | 窗口创建 / 定位 | `src/main/windows.ts` |
 | 托盘菜单 / 开机自启 | `src/main/tray.ts` |
@@ -115,7 +118,8 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 - ✅ 变更纪律落地：`docs/RELEASING.md` + `release.js` 门禁 + `test:e2e` 功能测试
 - ✅ fortune-ball 残留已清理（形象收敛为猫、抽签特效与 `fx.js` 移除、死字段移除）
 - ✅ **S1「它有自己的生活」（0.3.0）**：`core/petState` 状态机 + `core/quips` 台词库 + 气泡层 + 起名 + 动画开关生效
-- ⏳ 下一步 S2：人格卡 + 长期记忆 + 猫的笔记本
+- ✅ **S2「它记得你 / 笔记本上桌」（0.4.0）**：人格卡 + 长期记忆（≤30 条，可逐条删/全部忘记/开关）+ 每日日记 + 全量备份导出/导入
+- ⏳ 下一步 S3：许愿瓶（单机）
 - 技术债清单与技术交付清单见 `docs/ARCHITECTURE.md` 第十二节
 
 ## 八、文档地图

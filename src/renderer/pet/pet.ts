@@ -78,6 +78,8 @@ function dispatch(event: PetEvent): void {
   if (moodChanged) paintMood()
   if (r.trigger) speak(pickBucket(r.trigger, event.now, petState.dragging), event.now)
   if (moodChanged || r.trigger) persistPetState()
+  // S2：交互计数供日记使用（点击 / 拖动 / 唤醒才算，不是每秒 tick）
+  if (event.type !== 'tick' && event.type !== 'pointer-leave') void window.api.bumpInteraction()
 }
 
 function tick(): void {

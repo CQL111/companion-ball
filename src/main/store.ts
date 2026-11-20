@@ -9,6 +9,8 @@ import * as agent from '../core/agent'
 import * as localLLM from './services/localLLM'
 import * as onlineConfig from './services/onlineConfig'
 import { logger } from './services/logger'
+import type { Memory } from '../core/memory'
+import type { Notebook } from '../core/notebook'
 
 export const store = new Store<StoreShape>({
   name: 'config',
@@ -23,6 +25,9 @@ export const store = new Store<StoreShape>({
     consentVersion: 0,
     animations: true,
     pet: { name: '', lastInteractAt: 0, lastGreetDate: '' },
+    memories: [],
+    notebook: { version: 1, entries: [] },
+    memoryEnabled: true,
   },
 })
 
@@ -153,4 +158,33 @@ export async function withAiFallback<T>(invoke: (cfg: ActiveAiConfig) => Promise
 export function defaultPosition(size = 80): Position {
   // 由调用方传入屏幕 bounds；这里只给兜底
   return { x: 0, y: 0 }
+}
+
+// ---------- 长期记忆（S2）----------
+export function getMemories(): Memory[] {
+  const list = store.get('memories')
+  return Array.isArray(list) ? list : []
+}
+
+export function setMemories(next: Memory[]): void {
+  store.set('memories', next)
+}
+
+export function isMemoryEnabled(): boolean {
+  return store.get('memoryEnabled') !== false
+}
+
+// ---------- 笔记本（S2）----------
+export function getNotebook(): Notebook {
+  const nb = store.get('notebook')
+  return nb && Array.isArray(nb.entries) ? nb : { version: 1, entries: [] }
+}
+
+export function setNotebook(next: Notebook): void {
+  store.set('notebook', next)
+}
+
+// ---------- 起名 ----------
+export function getPetName(): string {
+  return store.get('pet')?.name || ''
 }

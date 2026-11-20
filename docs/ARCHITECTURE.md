@@ -72,6 +72,7 @@
 ┌──────────────────────────────▼───────────────────────────────┐
 │ src/renderer/          渲染端                                   │
 │   pet/                 命令式 TS：拖拽 / 菜单 / 热区 / 预览      │
+│   notebook/            React 19：猫的笔记本（S2）                │
 │   chat/                React 19：对话浮窗                       │
 │   settings/            React 19：设置面板                       │
 │   consent/             React 19：首次启动协议同意               │
@@ -85,6 +86,10 @@
 │   agent.ts             对话循环（callLLM 注入）                 │
 │   petState.ts          情绪状态机（S1）                         │
 │   quips.ts             台词选择（冷却 + 最久未说优先）           │
+│   persona.ts           人格卡 → system prompt（含记忆块）        │
+│   memory.ts            记忆抽取提示词 / 解析 / 合并淘汰           │
+│   notebook.ts          每日日记 + Markdown 导出                  │
+│   backup.ts            全量导出 / 导入（不含 Key）               │
 │   types.ts             领域类型（shared/types 从这里扩展）      │
 │   logger-types.ts      日志接口（平台层注入实现）               │
 └──────────────────────────────────────────────────────────────┘
@@ -92,6 +97,7 @@
 ┌──────────────────────────────────────────────────────────────┐
 │ src/data/              内容资产（零依赖，可被 core 引用）        │
 │   quips.json           台词库：7 个 bucket + fallback（S1）     │
+│   persona.json         人格卡：习性 / 小习惯 / 边界 / 说话规则   │
 └──────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────┐
@@ -207,7 +213,28 @@ renderer 消费：
 
 状态机只输出 mood 与触发类型，不输出动画——手机端可以把同一个 mood 渲染成小组件文案。
 
-### 6. 日志与自检
+### 6. 记忆与笔记本（S2）
+
+```
+对话回复返回后（不等用户）
+   → remember.extractMemories(history)          异步，失败静默
+   → core.memory.shouldExtract（<20 字且 <3 轮则跳过）
+   → ai.callLLM(抽取提示词) → parseExtractedFacts → mergeMemories（去重 + 上限 30）
+   → store.memories
+   → remember.ensureDailyDiary()                重算当天日记（素材变了就重写）
+
+下一轮对话
+   → core.persona.composeSystemPrompt(名字, store.memories)
+   → 注入 agent.runAgent({ systemPrompt })
+
+笔记本：托盘 / IPC open-notebook → ensureDailyDiary → 笔记本窗口（React）
+备份：设置页导出 JSON（名字 / 记忆 / 日记 / 聊天，不含 API Key）
+```
+
+注意两处顺序：记忆按时间正序注入（最近的事实排最后）；日记必须**重算**而不是「当天只写一次」，
+否则启动时写下的「今天你几乎没出现」会一整天不更新。
+
+### 7. 日志与自检
 
 ```
 renderer window.logger.* → send(log-*) → main registerLogIpc → logger.write

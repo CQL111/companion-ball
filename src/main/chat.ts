@@ -1,11 +1,13 @@
 // chat.ts - AI 对话编排（会话历史、错误文案、进度推送）
 
 import * as agent from '../core/agent'
+import { composeSystemPrompt } from '../core/persona'
 import * as ai from './services/ai'
 import { logger } from './services/logger'
 import {
   aiFallbackNotice,
   clearAgentChat,
+  getMemories,
   getAgentHistory,
   resolveAiConfig,
   saveAgentChat,
@@ -15,6 +17,7 @@ import {
 } from './store'
 import { windows } from './state'
 import { createSettingsWindow } from './windows'
+import { extractMemories, ensureDailyDiary } from './remember'
 import type { AgentMessage, ChatReply } from '../shared/types'
 
 export function sendAiInputFocus(win: Electron.BrowserWindow): void {
@@ -82,6 +85,8 @@ export async function handleAsk(rawQuery: string): Promise<ChatReply> {
         aiConfig: cfg,
         ctx,
         logger,
+        // S2：人格卡 + 长期记忆合成为 system prompt
+        systemPrompt: composeSystemPrompt(store.get('pet')?.name, getMemories()),
         callLLM: ai.callLLM,
         onProgress: sendProgress,
       }),
@@ -89,6 +94,9 @@ export async function handleAsk(rawQuery: string): Promise<ChatReply> {
     setAgentHistory(result.history || [])
     saveAgentChat()
     logger.info('agent.chat', `tokens=${result.usage.total_tokens || '?'} fallback=${usedFallback}`)
+    // 记忆抽取：回复已返回，异步进行；失败静默。
+    // 抽完再刷新当天日记——否则启动时写下的「今天你几乎没出现」会一整天不更新。
+    void extractMemories(result.history || []).then(() => ensureDailyDiary())
     return { ok: true, text: result.text, notice: usedFallback ? aiFallbackNotice : '' }
   } catch (e) {
     const msg = String((e as Error).message || e)
