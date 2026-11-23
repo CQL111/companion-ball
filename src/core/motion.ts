@@ -100,6 +100,12 @@ const LOCO_CLIP: Record<LocoState, ClipName> = {
   fall: 'fall',
   land: 'land',
   held: 'held',
+  // 扒在边缘：暂时用侧影待机（后续可加专属姿态）
+  perch: 'idle',
+  // 贴边张望：像在攀爬的位置抬头
+  edgePeek: 'climb',
+  // 趴着睡：用正面睡觉动作
+  snooze: 'sleep',
 }
 
 /** 情绪 → 动作名（只在「没有在移动」时生效） */

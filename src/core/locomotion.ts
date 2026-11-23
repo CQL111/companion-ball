@@ -14,7 +14,20 @@ export interface Bounds {
   height: number
 }
 
-export type LocoState = 'idle' | 'walk' | 'climb' | 'hang' | 'fall' | 'land' | 'held'
+export type LocoState =
+  | 'idle'
+  | 'walk'
+  | 'climb'
+  | 'hang'
+  | 'fall'
+  | 'land'
+  | 'held'
+  /** 被拖到屏幕边缘松手：扒住边缘不往下掉 */
+  | 'perch'
+  /** 自己走到屏幕左右边缘抬头看（不是攀爬） */
+  | 'edgePeek'
+  /** 困了自己走到角落趴下 */
+  | 'snooze'
 
 export type LocoCue = 'land' | 'soft' | 'none'
 
@@ -25,6 +38,12 @@ export type Plan =
   /** 原地小动作：伸懒腰 / 舔爪 */
   | { kind: 'stretch' }
   | { kind: 'groom' }
+  /** 朝某个目标位置走去（比如鼠标停下的地方） */
+  | { kind: 'seek'; x: number }
+  /** 扒在左/右边缘 */
+  | { kind: 'perch'; side: 'left' | 'right'; until: number }
+  /** 走到角落趴下（困了） */
+  | { kind: 'snooze'; x: number }
 
 export interface Loco {
   state: LocoState
@@ -39,6 +58,8 @@ export interface Loco {
   nextDecisionAt: number
   /** land 状态结束时间 */
   landUntil: number
+  /** 下次允许「走过去看看鼠标」的时间（防止一直追着跑） */
+  nextSeekAt: number
 }
 
 export interface StepInput {
@@ -48,6 +69,13 @@ export interface StepInput {
   /** 是否可以自主走动（睡觉、菜单打开、被按住时为 false） */
   canWander: boolean
   random?: () => number
+  /**
+   * 鼠标停留的位置（窗口坐标）。有值时角色可能走过去看看；
+   * null/undefined 表示没有兴趣点（鼠标在动或已离开）。
+   */
+  interestPoint?: { x: number; y: number } | null
+  /** 困了：自己走到最近的角落趴下（不能自主活动时也允许慢走） */
+  sleepy?: boolean
 }
 
 export interface StepResult {
@@ -79,6 +107,7 @@ export function initLoco(x: number, y: number, now = 0): Loco {
     plan: null,
     nextDecisionAt: now + 20_000,
     landUntil: 0,
+    nextSeekAt: 0,
   }
 }
 
@@ -103,10 +132,54 @@ export function grabLoco(l: Loco): Loco {
   return { ...l, state: 'held', vx: 0, vy: 0, plan: null }
 }
 
-/** 用户松手：按释放速度飞出（vx/vy 单位 px/s） */
-export function releaseLoco(l: Loco, vx: number, vy: number, now: number): Loco {
+/** 距离边缘多近算「扒在边上」（像素） */
+export const PERCH_SNAP = 18
+/** 扒住的最长时间，之后会松手掉下去 */
+const PERCH_MS = 14_000
+
+/** 用户松手：按释放速度飞出（vx/vy 单位 px/s）
+ *  传入 bounds 时：**刚被拖动过**、贴着左右边缘、且速度很慢 → 扒住边缘而不是掉下去。
+ *  @param wasDragged 是否真的拖动过（只点一下不算）
+ */
+export function releaseLoco(
+  l: Loco,
+  vx: number,
+  vy: number,
+  now: number,
+  bounds?: Bounds,
+  wasDragged = true,
+): Loco {
   // vx 会在 stepLoco 的墙边反弹里被衰减，若不夹紧，连续撞墙会让水平速度越来越大
   const clampV = (v: number): number => Math.max(-1500, Math.min(1500, v))
+  const slow = Math.hypot(vx, vy) < 260
+
+  if (bounds && slow && wasDragged) {
+    const maxX = Math.max(0, bounds.width - PET_SIZE)
+    if (l.x <= PERCH_SNAP) {
+      return {
+        ...l,
+        x: 0,
+        state: 'perch',
+        vx: 0,
+        vy: 0,
+        facing: 1,
+        plan: { kind: 'perch', side: 'left', until: now + PERCH_MS },
+        nextDecisionAt: now,
+      }
+    }
+    if (maxX - l.x <= PERCH_SNAP) {
+      return {
+        ...l,
+        x: maxX,
+        state: 'perch',
+        vx: 0,
+        vy: 0,
+        facing: -1,
+        plan: { kind: 'perch', side: 'right', until: now + PERCH_MS },
+        nextDecisionAt: now,
+      }
+    }
+  }
   return { ...l, state: 'fall', vx: clampV(vx), vy: clampV(vy), plan: null, landUntil: 0, nextDecisionAt: now }
 }
 
@@ -175,7 +248,7 @@ export function stepLoco(l: Loco, input: StepInput): StepResult {
 
   if (l.state === 'walk') {
     const plan = l.plan
-    const targetX = plan && plan.kind === 'walk' ? plan.x : l.x
+    const targetX = plan && (plan.kind === 'walk' || plan.kind === 'seek' || plan.kind === 'snooze') ? plan.x : l.x
     const dir = Math.sign(targetX - l.x) || l.facing
     const step = WALK_SPEED * dt * dir
     let x = l.x + step
@@ -184,6 +257,16 @@ export function stepLoco(l: Loco, input: StepInput): StepResult {
     if (reached) {
       x = targetX
       // 到达墙边且计划是攀爬 → 开始往上爬
+      if (plan && plan.kind === 'snooze') {
+        return { loco: { ...l, x, facing, state: 'snooze', plan }, cue: 'none' }
+      }
+      if (plan && plan.kind === 'seek') {
+        // 走到鼠标附近：停一会儿，抬头看
+        return {
+          loco: { ...l, x, facing, state: 'idle', plan: null, nextDecisionAt: input.now + 8000 },
+          cue: 'none',
+        }
+      }
       if (plan && plan.kind === 'walk' && plan.then) {
         const side = plan.then === 'climb-left' ? 'left' : 'right'
         return {
@@ -226,10 +309,66 @@ export function stepLoco(l: Loco, input: StepInput): StepResult {
     return { loco: { ...l, x, facing: dir, plan: { kind: 'hang', dir, until: plan.until } }, cue: 'none' }
   }
 
+  if (l.state === 'perch') {
+    const plan = l.plan && l.plan.kind === 'perch' ? l.plan : { kind: 'perch' as const, side: 'left' as const, until: input.now + 3000 }
+    if (input.now >= plan.until) {
+      // 扒不住了，松手掉下去
+      return { loco: { ...l, state: 'fall', vx: plan.side === 'left' ? 40 : -40, vy: 0, plan: null }, cue: 'none' }
+    }
+    // 扒着时轻轻晃（不改位置，交给渲染端做姿态）
+    return { loco: { ...l, facing: plan.side === 'left' ? 1 : -1 }, cue: 'none' }
+  }
+
+  if (l.state === 'edgePeek') {
+    // 在边缘张望一会儿就回去
+    if (input.now >= l.nextDecisionAt) {
+      return { loco: { ...l, state: 'idle', plan: null, nextDecisionAt: input.now + pickIdleDelay(random) }, cue: 'none' }
+    }
+    return { loco: l, cue: 'none' }
+  }
+
+  // 困了：走到最近的角落趴下（即使 canWander=false 也允许，这是「自己要睡」）
+  if (input.sleepy && l.state === 'idle') {
+    const edge = l.x < maxX / 2 ? 0 : maxX
+    if (Math.abs(edge - l.x) > 12) {
+      return {
+        loco: { ...l, state: 'walk', plan: { kind: 'snooze', x: edge }, facing: edge >= l.x ? 1 : -1 },
+        cue: 'none',
+      }
+    }
+    return { loco: { ...l, state: 'snooze', plan: { kind: 'snooze', x: edge } }, cue: 'none' }
+  }
+  if (l.state === 'snooze' && !input.sleepy) {
+    // 醒了：回到普通待机
+    return { loco: { ...l, state: 'idle', plan: null, nextDecisionAt: input.now + pickIdleDelay(random) }, cue: 'none' }
+  }
+  if (l.state === 'snooze') return { loco: l, cue: 'none' }
+
   // idle
   if (!input.canWander) {
     return { loco: { ...l, state: 'idle', plan: null, nextDecisionAt: input.now + 2000 }, cue: 'none' }
   }
+  // 鼠标停留：走过去看看（有冷却，避免一直追着跑）
+  const ip = input.interestPoint
+  if (ip && input.now >= l.nextSeekAt) {
+    const target = Math.round(Math.max(0, Math.min(maxX, ip.x)))
+    const far = Math.abs(target - l.x) > 40
+    // 太近就别去（避免原地抖），但也要把冷却推后，否则每帧都会重新判断
+    l = far ? l : { ...l, nextSeekAt: input.now + 30_000 }
+    if (far) {
+      return {
+        loco: {
+          ...l,
+          state: 'walk',
+          plan: { kind: 'seek', x: target },
+          facing: target >= l.x ? 1 : -1,
+          nextSeekAt: input.now + 3 * 60 * 1000,
+        },
+        cue: 'none',
+      }
+    }
+  }
+
   if (input.now < l.nextDecisionAt) return { loco: l, cue: 'none' }
 
   const r = random()
@@ -250,7 +389,23 @@ export function stepLoco(l: Loco, input: StepInput): StepResult {
       cue: 'none',
     }
   }
-  if (r < 0.87) {
+  if (r < 0.83) {
+    // 走到某侧边缘张望一会儿
+    const side = random() < 0.5 ? 'left' : 'right'
+    const target = side === 'left' ? 0 : maxX
+    return {
+      loco: {
+        ...l,
+        state: 'walk',
+        plan: { kind: 'seek', x: target },
+        facing: target >= l.x ? 1 : -1,
+        // 到达后转为 edgePeek：复用 seek 的到达逻辑，但下一步用 nextDecisionAt 控制
+        nextDecisionAt: input.now + 6000,
+      },
+      cue: 'none',
+    }
+  }
+  if (r < 0.90) {
     // 伸懒腰：原地，约 3 秒
     return {
       loco: { ...l, state: 'idle', plan: { kind: 'stretch' }, nextDecisionAt: input.now + 3000 },

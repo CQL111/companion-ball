@@ -54,6 +54,10 @@ let grumbleUntil = 0
 let pointer: { x: number; y: number } | null = null
 let looking = false
 let gaze = { x: 0, y: 0 }
+/** 鼠标停留超过 1.5 秒的位置；用来让猫走过去看看 */
+let interestPoint: { x: number; y: number } | null = null
+let lastPointerAt = 0
+let lastPointerPos: { x: number; y: number } | null = null
 
 /** 把「身体状态 + 情绪 + 原地动作」映射成动作名，交给渲染器 */
 function paintClip(): void {
@@ -188,6 +192,10 @@ function locoFrame(now: number): void {
       bounds,
       // 睡觉 / 菜单打开 / 预览动画时不自主活动
       canWander: petState.mood !== 'sleep' && petState.mood !== 'doze' && !ball.classList.contains('orbit-open') && !isDrawing,
+      // 鼠标停着不动时，它可能会走过去看看
+      interestPoint,
+      // 困了（sleep/doze）会自己走到角落趴下
+      sleepy: petState.mood === 'sleep' || petState.mood === 'doze',
     })
     applyLoco(r.loco)
     if (r.cue === 'land') playSound('land')
@@ -202,6 +210,16 @@ requestAnimationFrame(locoFrame)
 // ---------- 注视：主进程每 80ms 推一次光标位置 ----------
 window.api.onCursorMoved((pos) => {
   pointer = pos
+  // 鼠标停留判定：位置几乎没动且超过 1.5 秒 → 它可能会走过去看看
+  const nowMs = Date.now()
+  const moved = !lastPointerPos || Math.hypot(pos.x - lastPointerPos.x, pos.y - lastPointerPos.y) > 6
+  if (moved) {
+    lastPointerPos = pos
+    lastPointerAt = nowMs
+    interestPoint = null
+  } else if (nowMs - lastPointerAt > 1500 && petState.mood !== 'sleep' && petState.mood !== 'doze') {
+    interestPoint = pos
+  }
   const cx = posX + BALL_SIZE / 2
   const cy = posY + BALL_SIZE * 0.4
   const dist = Math.hypot(pos.x - cx, pos.y - cy)
@@ -358,7 +376,7 @@ ball.addEventListener('pointerup', async () => {
   loco = syncLocoPosition(loco, posX, posY)
   // 只有真正拖动过才进入自由落体；单纯点一下不应该让猫从当前位置掉到地面
   if (wasMoved) {
-    loco = releaseLoco(loco, vx, vy, endNow)
+    loco = releaseLoco(loco, vx, vy, endNow, bounds, wasMoved)
   } else {
     loco = { ...loco, state: 'idle', plan: null, vx: 0, vy: 0, nextDecisionAt: endNow + 20_000 }
   }
