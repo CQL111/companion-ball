@@ -155,6 +155,24 @@ try {
     )
     check('宠物窗口已应用位置 transform', !!pos, String(pos))
 
+    // 回归：托盘「重置位置」必须把猫移回默认位置（不能 setPosition 全屏窗口）
+    await evalIn(pet, 'window.api.debugResetBall()')
+    await sleep(900)
+    const resetPos = await evalIn(
+      pet,
+      `(() => {
+        const r = document.querySelector('#ball').getBoundingClientRect()
+        return { x: Math.round(r.left), y: Math.round(r.top), vw: innerWidth, vh: innerHeight }
+      })()`,
+    )
+    const expectX = resetPos.vw - 80 - 40
+    const expectY = resetPos.vh - 80 - 40
+    check(
+      '重置位置回到右下角默认位置',
+      Math.abs(resetPos.x - expectX) < 8 && Math.abs(resetPos.y - expectY) < 8,
+      `${resetPos.x},${resetPos.y} vs ${expectX},${expectY}`,
+    )
+
     await evalIn(pet, 'window.api.openSettings()')
     await sleep(2000)
     await evalIn(pet, 'window.api.openAiInput()')

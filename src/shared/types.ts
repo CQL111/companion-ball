@@ -232,6 +232,10 @@ export interface CompanionApi {
   onPresenceBack(handler: (p: { awayMs: number }) => void): () => void
   onPresenceSit(handler: (p: { text: string; count: number }) => void): () => void
   onWeatherChanged(handler: (p: { kind: string; isDay: boolean; text: string }) => void): () => void
+  /** 托盘「重置位置」：渲染端把猫移回默认位置 */
+  onResetBall(handler: () => void): () => void
+  /** 测试用：与托盘「重置位置」走同一条路径 */
+  debugResetBall(): Promise<boolean>
 
   // 天气氛围（S4，默认关闭）
   weatherStatus(): Promise<WeatherStatusView>

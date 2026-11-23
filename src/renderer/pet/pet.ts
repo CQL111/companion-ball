@@ -257,6 +257,18 @@ window.api.onWeatherChanged(({ kind, text }) => {
   ball.setAttribute('data-weather', kind)
 })
 
+// ---------- 托盘「重置位置」：猫回到右下角默认位置 ----------
+window.api.onResetBall(() => {
+  window.logger.info('ball.reset', 'back to default position')
+  const screen = window.api.getScreenInfo()
+  void screen.then((s) => {
+    loco = initLoco(s.width - BALL_SIZE - 40, s.height - BALL_SIZE - 40, Date.now())
+    setBallTransform(loco.x, loco.y)
+    ball.setAttribute('data-loco', 'idle')
+    void window.api.savePosition(loco.x, loco.y)
+  })
+})
+
 window.addEventListener('resize', () => {
   bounds = { width: window.innerWidth, height: window.innerHeight }
 })

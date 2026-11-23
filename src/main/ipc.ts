@@ -39,7 +39,7 @@ import {
   openAiInputWindow,
   persistBallPosition,
 } from './windows'
-import { PERSONAS, broadcastPersona, rebuildTrayMenu } from './tray'
+import { PERSONAS, broadcastPersona, rebuildTrayMenu, resetBallPosition } from './tray'
 import { CH, EV } from '../shared/channels'
 import { configKeySchema, localModelSchema, memoryIdSchema, petNameSchema, rectSchema } from '../shared/ipc'
 import type { AiConfig, Persona } from '../shared/types'
@@ -460,6 +460,12 @@ export function registerIpc(): void {
       place: cfg.place,
       current: snap ? { kind: snap.kind, isDay: snap.isDay } : null,
     }
+  })
+
+  // 测试用：与托盘共用 resetBallPosition，保证验证的是真实路径
+  handle(CH.debugResetBall, () => {
+    resetBallPosition('debug')
+    return true
   })
 
   handle(CH.openMail, () => {

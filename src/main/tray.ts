@@ -4,7 +4,8 @@ import { app, dialog, Menu, nativeImage, shell, Tray } from 'electron'
 import { logger } from './services/logger'
 import { clearAll as clearAllLogs, getLevel, setLevel, getLogDir } from './services/logger'
 import { state, windows } from './state'
-import { createBallWindow, createNotebookWindow, createSettingsWindow, getDefaultPosition } from './windows'
+import { createBallWindow, createNotebookWindow, createSettingsWindow } from './windows'
+import { EV } from '../shared/channels'
 import { openAiInputWindow } from './windows'
 import { store } from './store'
 import { ensureDailyDiary } from './remember'
@@ -36,9 +37,30 @@ export function applyAutoStart(enabled: boolean): void {
   }
 }
 
+/**
+ * 把猫移回默认位置。
+ * 猫的位置由渲染端的 transform 决定，ballWindow 是全屏覆盖层——**绝不能 setPosition**，
+ * 那会把整层移出屏幕，看起来像「猫丢了」。
+ * 正确做法：清空存档 + 通知渲染端重置。
+ */
+export function resetBallPosition(source: 'tray' | 'debug' = 'tray'): void {
+  logger.info('main.reset', 'position reset (' + source + ')')
+  store.set('position', null)
+  if (windows.ball && !windows.ball.isDestroyed()) {
+    windows.ball.webContents.send(EV.resetBall)
+  }
+}
+
 export function createTray(): void {
-  let icon = nativeImage.createFromPath(resourceFile('tray.png'))
-  if (icon.isEmpty()) icon = nativeImage.createEmpty()
+  const iconPath = resourceFile('tray.png')
+  let icon = nativeImage.createFromPath(iconPath)
+  if (icon.isEmpty()) {
+    // 不能静默失败：托盘没图标时用户会以为应用没启动。至少留下原因。
+    logger.error('tray', `icon load failed: ${iconPath}`)
+    // 退回到应用图标（256px），它一定在 resources/ 里
+    const fallback = nativeImage.createFromPath(resourceFile('icon-sm.png'))
+    icon = fallback.isEmpty() ? nativeImage.createEmpty() : fallback
+  }
   try {
     windows.tray = new Tray(icon)
   } catch (e) {
@@ -46,6 +68,7 @@ export function createTray(): void {
     return
   }
   windows.tray.setToolTip('桌面陪伴 · 团子猫')
+  logger.info('tray', `created (${icon.isEmpty() ? 'EMPTY ICON' : 'ok'})`)
   rebuildTrayMenu()
 }
 
@@ -128,15 +151,7 @@ export function rebuildTrayMenu(): void {
     },
     {
       label: '重置位置',
-      click: () => {
-        logger.info('main.tray', 'reset position')
-        store.set('position', null)
-        if (windows.ball && !windows.ball.isDestroyed()) {
-          const pos = getDefaultPosition()
-          windows.ball.setPosition(pos.x, pos.y)
-          store.set('position', pos)
-        }
-      },
+      click: () => resetBallPosition('tray'),
     },
     { type: 'separator' },
     {

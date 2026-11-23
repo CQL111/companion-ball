@@ -80,6 +80,8 @@ const api: CompanionApi = {
   onPresenceBack: (handler) => subscribe(EV.presenceBack, handler),
   onPresenceSit: (handler) => subscribe(EV.presenceSit, handler),
   onWeatherChanged: (handler) => subscribe(EV.weatherChanged, handler),
+  onResetBall: (handler) => subscribe(EV.resetBall, handler),
+  debugResetBall: () => ipcRenderer.invoke(CH.debugResetBall),
 
   // 天气氛围（S4）
   weatherStatus: () => ipcRenderer.invoke(CH.weatherStatus),

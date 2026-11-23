@@ -54,6 +54,8 @@ export const CH = {
   weatherStatus: 'weather-status',
   weatherLookup: 'weather-lookup',
   weatherSet: 'weather-set',
+  // 测试用：与托盘「重置位置」同一条路径（仅 e2e 使用）
+  debugResetBall: 'debug-reset-ball',
   logInfo: 'log-info',
   logWarn: 'log-warn',
   logError: 'log-error',
@@ -72,10 +74,8 @@ export const EV = {
   presenceAway: 'presence-away',
   presenceBack: 'presence-back',
   presenceSit: 'presence-sit',
-  weatherStatus: 'weather-status',
-  weatherLookup: 'weather-lookup',
-  weatherSet: 'weather-set',
   weatherChanged: 'weather-changed',
+  resetBall: 'reset-ball',
 } as const
 
 export type Channel = (typeof CH)[keyof typeof CH]

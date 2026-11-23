@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.8.2] — 修复：重置位置丢失 + 托盘图标消失（2026-11-23）
+
+### 修复
+- **托盘「重置位置」后猫不见了**：旧代码对 `ballWindow` 调 `setPosition(x, y)`，但
+  `ballWindow` 是**全屏透明覆盖层**，猫的位置由渲染端的 `transform` 决定。
+  把窗口按 transform 坐标移动，等于把整层移出屏幕，看起来就是「猫丢了」。
+  - 现在：清空存档 + 通过 `reset-ball` 事件通知渲染端回到默认位置
+  - 抽出 `resetBallPosition()`，托盘与调试入口共用同一条路径
+  - 新增 e2e 回归断言（重置后必须在屏幕右下角默认位置）
+- **托盘图标不显示**：`resourceFile()` 用 `process.env.NODE_ENV !== 'development'` 判断，
+  但 electron-vite **不会注入 `NODE_ENV` 到主进程**。dev 模式下路径因此指向
+  `node_modules/electron/dist/resources`（那里没有 tray.png），图标静默变成空图。
+  - 改用 `app.isPackaged` 判断
+  - 图标加载失败不再静默：写 `error` 日志并回退到 `icon-sm.png`
+  - 创建成功后写一条 `tray created (ok)` 日志，便于下次排查
+
+### 顺带清理
+- `CH` 常量表里混入了 3 个本属于事件的天气通道名（`weatherStatus/weatherLookup/weatherSet`
+  同时出现在 `CH` 与 `EV`），已移回 `CH`
+- 新增 `debugResetBall` IPC，仅用于 e2e 驱动真实重置路径
+
+### 验证
+- `npm test` → 200 通过 + `check:core` 通过
+- `npm run test:e2e` → **17/17 通过**（新增重置位置回归）
+- 真机：重置后 (494,100) → (1416,792) 右下角默认位置；托盘日志 `created (ok)`
+
 ## [0.8.1] — S4.5：更像活物（2026-11-20）
 
 > 三个行为：它会跟着你走过去、被拖到边缘会扒住、困了自己找地方睡。
