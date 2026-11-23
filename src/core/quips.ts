@@ -19,6 +19,10 @@ export type QuipBucket =
   | 'pat'
   | 'grumble'
   | 'return'
+  /** 久坐提醒专用（配合「你坐了 N 分钟」） */
+  | 'sitting'
+  /** 长时间未交互专用（弱理由） */
+  | 'idle'
 
 export interface QuipDatabase {
   version: number

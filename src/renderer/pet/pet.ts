@@ -20,6 +20,8 @@ import { grabLoco, initLoco, releaseLoco, stepLoco, syncLocoPosition, type Bound
 import { playSound, setSoundEnabled } from './sound'
 import { gazeToward, isPayingAttention, reactionFor, zoneAt } from '../../core/touch'
 import { clipForState, type ClipName } from '../../core/motion'
+import { bucketFor, chooseObservation, composeSpeech, speechText, type Observation } from '../../core/speech'
+import { initNeeds, nextNeed, pickNeedLine, pickSatisfiedLine, reduceNeeds, type NeedKind, type NeedsState } from '../../core/needs'
 import { loadSkin, type SpriteRenderer } from './renderer'
 // ?url 让 Vite 负责拷贝素材并给出正确地址（dev 与打包后都可用）
 import atlasUrl from './skins/placeholder/cat.png?url'
@@ -58,6 +60,64 @@ let gaze = { x: 0, y: 0 }
 let interestPoint: { x: number; y: number } | null = null
 let lastPointerAt = 0
 let lastPointerPos: { x: number; y: number } | null = null
+
+// ---------- 「它需要你」与「为什么开口」 ----------
+let needs: NeedsState = initNeeds(Date.now(), '')
+let lastSpokeAt = 0
+/** 主进程上报的久坐分钟数（0 = 没有） */
+let sittingMinutes = 0
+/** 上一次由 UI 主动展示的气泡时间，用于「打扰预算」 */
+let lastBubbleAt = 0
+
+/** 主动开口的统一入口：先有观察，再有台词。 */
+function speakWithReason(obs: Observation): boolean {
+  if (obs.kind === 'none') return false
+  // 打扰预算：两次主动开口至少间隔 10 分钟
+  const now = Date.now()
+  if (now - lastBubbleAt < 10 * 60 * 1000) return false
+
+  // 需求有自己的台词池
+  if (obs.kind === 'need') {
+    const line = pickNeedLine(obs.need)
+    showBubble(line)
+    lastBubbleAt = now
+    lastSpokeAt = now
+    return true
+  }
+  // 其余走台词库：bucket 由观察决定
+  const bucket = bucketFor(obs)
+  if (!bucket) return false
+  const line = pickQuip(quipDb, bucket, quipHistory, now)
+  if (!line) return false
+  quipHistory = rememberQuip(quipHistory, line, now)
+  const speech = composeSpeech(obs, line)
+  if (!speech) return false
+  showBubble(speechText(speech))
+  lastBubbleAt = now
+  lastSpokeAt = now
+  return true
+}
+
+/** 每秒评估一次：有没有值得说的事 */
+function evaluateSpeech(): void {
+  // 需求：到点冒一个
+  const pending = nextNeed(needs, Date.now())
+  if (pending) needs = reduceNeeds(needs, { type: 'raise', now: Date.now(), kind: pending })
+
+  const obs = chooseObservation({
+    now: Date.now(),
+    mood: petState.mood,
+    loco: loco.state,
+    lastInteractAt: petState.lastInteractAt,
+    sittingMinutes,
+    pendingNeed: needs.active,
+    lastSpokeAt,
+    speaking: false,
+  })
+  speakWithReason(obs)
+  // 注意：需求说出口后**不立刻标记为满足**——要等用户真的碰它。
+  // 否则「需求」就退化成「一句台词」，不会让人产生参与感。
+}
 
 /** 把「身体状态 + 情绪 + 原地动作」映射成动作名，交给渲染器 */
 function paintClip(): void {
@@ -132,6 +192,12 @@ function dispatch(event: PetEvent): void {
   petState = r.state
 
   if (moodChanged) paintMood()
+  // 用户真的碰它了 → 需求满足，并说一句简短的回应
+  if (needs.active && (event.type === 'click' || event.type === 'drag-start' || event.type === 'pointer-enter')) {
+    const kind = needs.active
+    needs = reduceNeeds(needs, { type: 'satisfy', now: Date.now() })
+    window.setTimeout(() => showBubble(pickSatisfiedLine(kind)), 1200)
+  }
   if (r.trigger === 'wake') justWokeUntil = Date.now() + 900
   if (r.trigger) speak(pickBucket(r.trigger, event.now, petState.dragging), event.now)
   if (moodChanged || r.trigger) persistPetState()
@@ -141,6 +207,8 @@ function dispatch(event: PetEvent): void {
 
 function tick(): void {
   dispatch({ type: 'tick', now: Date.now() })
+  needs = reduceNeeds(needs, { type: 'tick', now: Date.now() })
+  evaluateSpeech()
 }
 window.setInterval(tick, 1000)
 
@@ -243,10 +311,11 @@ window.api.onPresenceBack(({ awayMs }) => {
   else patUntil = Date.now() + 1200
 })
 
-window.api.onPresenceSit(({ text }) => {
-  // 久坐提醒：用它自己的语气，不抢焦点，3 秒自灭
-  showBubble(text)
-  window.logger.info('presence.sit', 'reminded')
+window.api.onPresenceSit(({ minutes }) => {
+  // 久坐是「观察」而不是「通知」：文案由观察 + 台词合成
+  sittingMinutes = minutes
+  window.logger.info('presence.sit', 'reminded after ' + minutes + 'min')
+  speakWithReason({ kind: 'sitting-long', minutes })
 })
 
 // ---------- S4：天气氛围（下雨 / 下雪 / 打雷时才说话） ----------
@@ -268,6 +337,22 @@ window.api.onResetBall(() => {
     void window.api.savePosition(loco.x, loco.y)
   })
 })
+
+// 测试用：直接触发一次「带原因」的开口（不改变生产行为）
+;(window as unknown as { debugSpeak: (kind?: string) => void }).debugSpeak = (kind?: string) => {
+  if (kind === 'need') needs = reduceNeeds(needs, { type: 'raise', now: Date.now(), kind: 'hungry' })
+  const obs: Observation =
+    kind === 'need'
+      ? { kind: 'need', need: needs.active ?? 'hungry' }
+      : kind === 'sit'
+        ? { kind: 'sitting-long', minutes: 62 }
+        : kind === 'back'
+          ? { kind: 'user-back', awayMinutes: 65 }
+          : { kind: 'idle-for', minutes: 50 }
+  // 测试入口绕过打扰预算
+  lastBubbleAt = 0
+  speakWithReason(obs)
+}
 
 window.addEventListener('resize', () => {
   bounds = { width: window.innerWidth, height: window.innerHeight }

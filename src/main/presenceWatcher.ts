@@ -6,7 +6,6 @@ import { powerMonitor } from 'electron'
 import {
   dayKey,
   initSit,
-  pickSitLine,
   presenceOf,
   reduceSit,
   sitCheck,
@@ -114,9 +113,11 @@ function tick(): void {
   const check = sitCheck(state.sit, now)
   if (!check.shouldRemind) return
 
-  // 提醒：气泡 + 台词，不抢焦点
-  const line = pickSitLine(state.sit.todayCount)
+  // 只发送事实（坐了多少分钟），文案由渲染端统一按「观察 → 台词」生成。
+  // 不在主进程烘焙文案：否则久坐说的话会和其他渠道（需求 / 天气）的口气分裂。
+  const minutes = Math.max(1, Math.round((now - state.sit.since) / 60000))
+  const count = state.sit.todayCount + 1
   state.sit = reduceSit(state.sit, { type: 'reminded', now, day: dayKey(now) })
-  logger.info('presence.sit', `remind #${state.sit.todayCount}`)
-  send('presence-sit', { text: line, count: state.sit.todayCount })
+  logger.info('presence.sit', `remind #${count} after ${minutes}min`)
+  send('presence-sit', { minutes, count })
 }

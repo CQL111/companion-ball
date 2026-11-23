@@ -230,7 +230,7 @@ export interface CompanionApi {
   /** 用户离开 / 回来 / 久坐提醒（S4） */
   onPresenceAway(handler: (p: { since: number }) => void): () => void
   onPresenceBack(handler: (p: { awayMs: number }) => void): () => void
-  onPresenceSit(handler: (p: { text: string; count: number }) => void): () => void
+  onPresenceSit(handler: (p: { minutes: number; count: number }) => void): () => void
   onWeatherChanged(handler: (p: { kind: string; isDay: boolean; text: string }) => void): () => void
   /** 托盘「重置位置」：渲染端把猫移回默认位置 */
   onResetBall(handler: () => void): () => void
