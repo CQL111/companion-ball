@@ -1,8 +1,8 @@
 /node_modules
-/server/node_modules
+# 子包也会有自己的 node_modules（含 vitest/vite 缓存），必须一并忽略
+**/node_modules
 /server/.wrangler
 /server/wrangler.test.toml
-/packages/server/node_modules
 /packages/server/.wrangler
 /packages/server/wrangler.test.toml
 /packages/desktop/out
