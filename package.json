@@ -35,7 +35,7 @@
     "publish:r2": "node scripts/publish-r2.js",
     "build:skin": "npm run build:skin -w @companion/desktop",
     "pack:skin": "npm run pack:skin -w @companion/desktop",
-    "build:site": "npm run build:site -w @companion/web",
+    "build:site": "npm run build -w @companion/web",
     "mock:bottle": "node packages/server/scripts/mock-bottle-server.mjs",
     "dev:server": "npm run dev -w @companion/server",
     "deploy:server": "npm run deploy -w @companion/server"

@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:site": "node build-site.cjs"
+    "build": "node build-site.cjs",
+    "preview": "wrangler pages dev dist --compatibility-date=2026-11-01",
+    "deploy": "wrangler pages deploy dist"
   }
 }

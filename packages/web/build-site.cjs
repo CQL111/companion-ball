@@ -1,25 +1,30 @@
-// 把 product-intro.html 发布为 GitHub Pages 站点首页。
-// Pages 源设为 master 分支的 /docs 目录，所以产物是 docs/index.html。
-// 用法: npm run build:site
+// build-site.cjs - 把 public/ 组装成 Cloudflare Pages 产物 dist/
+//
+// 为什么不用 Astro：站点只有一页静态 HTML，引入框架只增加失败点。
+// Pages 需要的是「一个装着 index.html 的目录」+ 可选 _routes.json + functions/。
+//
+// 用法：npm run build -w @companion/web
 const fs = require('fs');
 const path = require('path');
 
-const root = path.resolve(__dirname, '..', '..');
-const src = path.join(__dirname, 'product-intro.html');
-const outDir = path.join(root, 'docs');
-const out = path.join(outDir, 'index.html');
+const PKG = __dirname;
+const SRC = path.join(PKG, 'public');
+const OUT = path.join(PKG, 'dist');
 
-if (!fs.existsSync(src)) {
-  console.error('❌ 找不到 product-intro.html');
-  process.exit(1);
+fs.rmSync(OUT, { recursive: true, force: true });
+fs.mkdirSync(OUT, { recursive: true });
+
+// 静态文件
+for (const name of fs.readdirSync(SRC)) {
+  fs.cpSync(path.join(SRC, name), path.join(OUT, name), { recursive: true });
 }
 
-fs.mkdirSync(outDir, { recursive: true });
-fs.copyFileSync(src, out);
+// Pages 路由：页面与接口都交给 Functions 兜底匹配，静态资源优先
+// 见 https://developers.cloudflare.com/pages/functions/routing/
+const routes = { version: 1, include: ['/*'], exclude: [] };
+fs.writeFileSync(path.join(OUT, '_routes.json'), JSON.stringify(routes, null, 2) + '\n');
+fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
 
-// 关掉 Jekyll 处理，避免下划线开头的文件被忽略，也省一次构建
-fs.writeFileSync(path.join(outDir, '.nojekyll'), '');
-
-const kb = (fs.statSync(out).size / 1024).toFixed(1);
-console.log(`✅ 已生成 docs/index.html (${kb} KB)`);
-console.log('   Pages: https://cql111.github.io/companion-ball/');
+const files = fs.readdirSync(OUT);
+console.log(`✅ dist/ 已生成：${files.join(', ')}`);
+console.log('   部署：npx wrangler pages deploy dist --project-name <项目名>');

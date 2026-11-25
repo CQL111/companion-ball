@@ -29,3 +29,11 @@ out-public
 # 本地开发/验证产物
 .dev-data
 .out-data
+
+# Cloudflare Pages
+packages/web/dist
+packages/web/.dev.vars
+
+# wrangler 缓存（pages dev / 本地状态）
+.wrangler/
+**/.wrangler/

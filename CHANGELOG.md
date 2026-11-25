@@ -1,6 +1,31 @@
 # Changelog
 
-## [0.9.1] — 单仓库 monorepo：瓶子规则收敛为唯一契约源（未发布）
+## [0.9.2] — 下载页上 Cloudflare Pages（未发布）
+
+> 0.9.1 把安装包发到了 R2，但**产品页没有地方被服务**。本版补上站点托管：
+> 静态页 + 两个 Pages Functions，让「打开网页 → 点下载」这条链路完整。
+
+### 新增：站点（`packages/web`）
+- 静态页改为 `packages/web/public/index.html`；构建产物 `dist/`（含 `_routes.json`）
+- 构建不再依赖任何框架：单页 HTML 直接组装，少一个失败点
+- **Pages Functions**（同源，无需 CORS）：
+  - `GET /v1/download/manifest` → 代理 R2 `latest.json`
+  - `GET /v1/download/latest?os=win|mac` → 302 到 R2 安装包（校验下载域，防开放重定向）
+- 下载按钮在取不到版本时自动置灰，不会出现「点了没反应」
+- 移除旧的 `docs/index.html`（GitHub Pages 产物）
+
+### 变更
+- 根脚本 `build:site` 改为 `npm run build -w @companion/web`
+- `packages/web` 新增 `preview` / `deploy`（wrangler pages）
+
+### 验证
+- `npm test` → **236 通过** + core 边界检查
+- `npm run build:site` → `dist/` 产出正确（`index.html` / `_routes.json` / `.nojekyll`）
+- 本地 `wrangler pages dev` 实测：
+  - 未配置 `R2_PUBLIC_BASE_URL` → manifest 返回 `503 NO_RELEASE`（页面按钮置灰）
+  - 配置后 → manifest 返回 0.9.1 资产，`/latest?os=win` 正确 302 到 R2 安装包
+
+## [0.9.1] — 单仓库 monorepo：瓶子规则收敛为唯一契约源（2026-11-25）
 
 > 起因：`src/core/mailbox.ts` 与 `server/src/rules.ts` 是两份手抄副本，
 > 靠 `tests/rules-parity.test.ts` 比对防漂移；`DAILY_BOTTLE_LIMIT` 甚至在客户端写死、

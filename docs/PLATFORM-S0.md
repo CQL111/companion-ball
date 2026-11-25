@@ -182,8 +182,13 @@ const CONTRACTS_DIR = path.join(ROOT, 'packages', 'contracts', 'src');
    - 对象键：`releases/v{version}/{artifactName}`
    - 同时上传 `latest.json`（版本号、文件名、SHA-256、大小、发布日期）
    - `release.js` 按 `PUBLISH_TARGET=r2|github` 选择目标，**默认 r2**
-2. **站点下载页**：`packages/web/product-intro.html` 从 `/v1/download/manifest` 读版本，
-   按钮指向 `/v1/download/latest?os=win`（302 到 R2）；失败时按钮自动置灰
+2. **站点下载页**：`packages/web`（静态 HTML + Pages Functions）
+   - `public/index.html` 从 `/v1/download/manifest` 读版本，按钮指向 `/v1/download/latest?os=win`
+   - `functions/v1/download/{manifest,latest}.ts` 同源代理 R2，取不到版本时按钮自动置灰
+   - 构建：`npm run build:site` → `packages/web/dist/`（含 `_routes.json`）
+   - 部署：`npx wrangler pages deploy dist --project-name companion-ball-web`
+     （或 Cloudflare 控制台接 Git：根目录 `packages/web`，构建命令 `npm run build`，产物 `dist`）
+   - Pages 项目需配置环境变量 `R2_PUBLIC_BASE_URL`
 3. **GitHub Release 仅作内部记录**：tag 与 notes 保留，不再上传安装包资产
 
 需要的环境变量（仓库根 `.env`，已被 gitignore）：
