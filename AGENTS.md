@@ -75,6 +75,9 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 
 ## 五、最高频的坑（按踩坑概率排序）
 
+0. **命令超时 ≠ 失败**。`git push` / `npm run release` 这类长命令超时后，
+   很可能**后台已经把事做完了**。先验证状态（`git status -sb`、`git ls-remote --tags`、
+   查线上 `latest.json`），再下结论——否则会误报失败，浪费一轮排查。
 1. **球的 transform 只能由 `setBallTransform` 写**（位置由它维护）；动画只能动
    `.ball-inner` 或 SVG 分组。动了 `.ball` 的 transform 会让球瞬移。
 2. **`update-ball-pos` 是 60fps 通道**：不写日志；落盘走 400ms 合并。
