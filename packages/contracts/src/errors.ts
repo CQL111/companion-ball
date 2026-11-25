@@ -6,6 +6,8 @@ export function bottleErrorText(code: string): string {
   switch (code) {
     case 'DAILY_LIMIT':
       return '今天放得够多了，明天再来'
+    case 'RATE_LIMITED':
+      return '慢一点，海面有点挤'
     case 'SERVICE_PAUSED':
       return '猫邮局暂时关门了'
     case 'REVOKED':

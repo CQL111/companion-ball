@@ -26,6 +26,7 @@ export interface ReplyDTO {
 export type BottleErrorCode =
   | 'BAD_TOKEN'
   | 'DAILY_LIMIT'
+  | 'RATE_LIMITED'
   | 'SERVICE_PAUSED'
   | 'REVOKED'
   | 'NOT_FOUND'

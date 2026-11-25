@@ -21,10 +21,14 @@ import { hashToken, randomId } from './crypto'
 
 export interface Env {
   DB: D1Database
+  /** 限流计数（每分钟 IP 配额）；未绑定时 IP 限流静默跳过 */
+  RATE_LIMIT?: KVNamespace
   BOTTLE_TTL_DAYS: string
   MAX_PICKS: string
   DAILY_BOTTLE_LIMIT: string
   DAILY_REPLY_LIMIT: string
+  /** 单 IP 每分钟写请求上限（默认 30） */
+  IP_RATE_LIMIT_PER_MIN?: string
   EMERGENCY_OFF: string
   /** 安装包分发（R2 绑定）；未绑定时回退到 R2_PUBLIC_BASE_URL */
   DOWNLOADS?: R2Bucket
@@ -58,6 +62,38 @@ async function auth(req: Request, env: Env): Promise<Ctx | Response> {
   if (!token || token.length < 16 || token.length > 128) return err('BAD_TOKEN', 401)
   const tokenHash = await hashToken(token)
   return { env, tokenHash, now: Date.now() }
+}
+
+/**
+ * 单 IP 每分钟写请求上限（KV 计数，避免每请求写 D1）。
+ * KV 的原子性不是强一致，所以这里是**粗粒度防刷**，不是精确配额——
+ * 精确的每日额度仍然由 D1 的设备维度计数保证。
+ * 未绑定 RATE_LIMIT 或拿不到 IP 时静默放行（不因限流失效阻断功能）。
+ */
+async function checkIpLimit(req: Request, env: Env): Promise<Response | null> {
+  const kv = env.RATE_LIMIT
+  if (!kv) return null
+  // CF-Connecting-IP 由 Cloudflare 注入，客户端伪造不了
+  const ip = req.headers.get('CF-Connecting-IP')
+  if (!ip) return null
+
+  const limit = readLimit(env, 'IP_RATE_LIMIT_PER_MIN', 30)
+  const minute = Math.floor(Date.now() / 60000)
+  // IP 不落原文：只存哈希前缀，限流用途
+  const ipHash = (await hashToken(ip)).slice(0, 16)
+  const key = `rl:${ipHash}:${minute}`
+
+  try {
+    const raw = await kv.get(key)
+    const used = raw ? Number(raw) : 0
+    if (used >= limit) return err('RATE_LIMITED', 429)
+    // KV 最少 60s 过期；多算 1 分钟避免边界残留
+    await kv.put(key, String(used + 1), { expirationTtl: 120 })
+    return null
+  } catch {
+    // KV 故障不阻断业务
+    return null
+  }
 }
 
 /** 一天从本地 0 点算起：与投递池用同一时区，避免跨时区用户配额错位 */
@@ -303,6 +339,10 @@ export default {
     }
 
     if (req.method !== 'POST') return err('METHOD_NOT_ALLOWED', 405)
+
+    // IP 层面的粗粒度防刷（单设备日额度在 handler 内用 D1 精确校验）
+    const ipLimited = await checkIpLimit(req, env)
+    if (ipLimited) return ipLimited
 
     const authResult = await auth(req, env)
     if (authResult instanceof Response) return authResult
