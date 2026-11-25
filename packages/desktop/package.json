@@ -1,6 +1,6 @@
 {
   "name": "@companion/desktop",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "description": "桌面陪伴 · 团子猫：常驻桌角的 AI 团子猫，可聊天、可拖拽",
   "main": "./out/main/index.js",
