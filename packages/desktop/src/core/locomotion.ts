@@ -201,6 +201,15 @@ export function stepLoco(l: Loco, input: StepInput): StepResult {
   // 用户按住：什么都不做
   if (l.state === 'held') return { loco: l, cue: 'none' }
 
+  // 不能自主走动时（睡着 / 菜单打开 / 拖动中），正在走的这一段要立刻停下 ——
+  // 否则会看到「睡着了还在走」这种穿帮。物理状态（fall/land/hang）不受影响。
+  if (!input.canWander && l.state === 'walk') {
+    return {
+      loco: { ...l, state: 'idle', plan: null, vx: 0, vy: 0, nextDecisionAt: input.now + 60_000 },
+      cue: 'none',
+    }
+  }
+
   if (l.state === 'fall') {
     let { x, y, vx, vy } = l
     vy += GRAVITY * dt

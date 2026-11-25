@@ -22,10 +22,16 @@ import { gazeToward, isPayingAttention, reactionFor, zoneAt } from '../../core/t
 import { clipForState, type ClipName } from '../../core/motion'
 import { bucketFor, chooseObservation, composeSpeech, speechText, type Observation } from '../../core/speech'
 import { initNeeds, nextNeed, pickNeedLine, pickSatisfiedLine, reduceNeeds, type NeedKind, type NeedsState } from '../../core/needs'
+import { canExpressNeed, planForNeed } from '../../core/needMotion'
 import { loadSkin, type SpriteRenderer } from './renderer'
 // ?url 让 Vite 负责拷贝素材并给出正确地址（dev 与打包后都可用）
 import atlasUrl from './skins/placeholder/cat.png?url'
 import skinManifest from './skins/placeholder/manifest.json'
+
+// P0.5：一次需求身体表达的截止时间（0 = 没有在表达）
+let needMotionUntil = 0
+/** 测试/演示用：强制睡眠，覆盖状态机按时间推算出的情绪 */
+let forceSleep = false
 
 const ball = document.getElementById('ball') as HTMLDivElement
 const ballInner = document.getElementById('ball-inner') as HTMLDivElement
@@ -207,6 +213,11 @@ function dispatch(event: PetEvent): void {
 
 function tick(): void {
   dispatch({ type: 'tick', now: Date.now() })
+  // 强制睡眠（仅测试/演示入口）：状态机每秒会按时间重算情绪，这里压回去
+  if (forceSleep && petState.mood !== 'sleep') {
+    petState = { ...petState, mood: 'sleep' }
+    paintMood()
+  }
   needs = reduceNeeds(needs, { type: 'tick', now: Date.now() })
   evaluateSpeech()
 }
@@ -254,12 +265,45 @@ function locoFrame(now: number): void {
   const dtMs = lastFrameAt ? now - lastFrameAt : 16
   lastFrameAt = now
   if (!dragState) {
+    const canWander =
+      petState.mood !== 'sleep' && petState.mood !== 'doze' && !ball.classList.contains('orbit-open') && !isDrawing
+    const eyesOpenNow = canExpressNeed({
+      mood: petState.mood,
+      canWander,
+      now: Date.now(),
+      activeUntil: needs.activeUntil,
+    })
+    // P0.5：需求先被「看见」——身体先于语言。只在还空着的时候注入，
+    // 不打断它正在走的路 / 正在做的动作。
+    if (eyesOpenNow && needs.active && !loco.plan && loco.state === 'idle' && Date.now() >= needMotionUntil) {
+      const motion = planForNeed(needs.active, { boundsWidth: bounds.width, maxX: Math.max(0, bounds.width - BALL_SIZE), x: loco.x, interestPoint }, Date.now())
+      if (motion) {
+        needMotionUntil = motion.until
+        // nextDecisionAt 必须推到窗口结束，否则 stepLoco 的 idle 分支会立刻抽一个新计划覆盖它
+        loco = {
+          ...loco,
+          state: motion.plan.kind === 'seek' ? 'walk' : 'idle',
+          plan: motion.plan,
+          nextDecisionAt: motion.until,
+          facing: motion.plan.kind === 'seek' && motion.plan.x >= loco.x ? 1 : -1,
+        }
+      }
+    }
+    // 身体表达窗口结束，或环境不再允许表达（睡着 / 打开菜单 / 开始拖动）：
+    // 立刻收掉这次注入的计划，不要出现「睡着了还在走」。
+    if (needMotionUntil && (!eyesOpenNow || Date.now() >= needMotionUntil)) {
+      needMotionUntil = 0
+      if (loco.state === 'walk' || loco.state === 'idle') {
+        loco = { ...loco, state: 'idle', plan: null, nextDecisionAt: Date.now() + (eyesOpenNow ? 5000 : 60_000) }
+      }
+    }
+
     const r = stepLoco(loco, {
       dtMs,
       now: Date.now(),
       bounds,
       // 睡觉 / 菜单打开 / 预览动画时不自主活动
-      canWander: petState.mood !== 'sleep' && petState.mood !== 'doze' && !ball.classList.contains('orbit-open') && !isDrawing,
+      canWander,
       // 鼠标停着不动时，它可能会走过去看看
       interestPoint,
       // 困了（sleep/doze）会自己走到角落趴下
@@ -352,6 +396,16 @@ window.api.onResetBall(() => {
   // 测试入口绕过打扰预算
   lastBubbleAt = 0
   speakWithReason(obs)
+}
+
+// 测试用：强制进入/退出睡眠（验证「睡觉时不表达需求」）
+;(window as unknown as { debugSleep: (on?: boolean) => string }).debugSleep = (on = true) => {
+  forceSleep = on
+  petState = { ...petState, mood: on ? 'sleep' : 'neutral' }
+  ball.setAttribute('data-mood', petState.mood)
+  ballInner.setAttribute('data-mood', petState.mood)
+  paintClip()
+  return petState.mood
 }
 
 window.addEventListener('resize', () => {

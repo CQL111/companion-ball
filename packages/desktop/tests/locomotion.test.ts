@@ -150,3 +150,36 @@ describe('placeOnFloor', () => {
     expect(l.state).toBe('idle')
   })
 })
+
+describe('失去自主权时立刻停下（回归：睡着还在走）', () => {
+  it('walk 中 canWander=false → 立刻回 idle，不再位移', () => {
+    // 先让它走起来
+    const walking: Loco = {
+      ...initLoco(100, FLOOR, 0),
+      state: 'walk',
+      plan: { kind: 'walk', x: 900 },
+      facing: 1,
+    }
+    const stopped = stepLoco(walking, { dtMs: 16, now: 1000, bounds: BOUNDS, canWander: false })
+    expect(stopped.loco.state).toBe('idle')
+    expect(stopped.loco.plan).toBeNull()
+
+    // 后续帧不应再产生位移
+    const x0 = stopped.loco.x
+    const next = stepLoco(stopped.loco, { dtMs: 16, now: 1016, bounds: BOUNDS, canWander: false })
+    expect(next.loco.x).toBe(x0)
+  })
+
+  it('walk 中 canWander=true 不受影响（仍在走）', () => {
+    const walking: Loco = { ...initLoco(100, FLOOR, 0), state: 'walk', plan: { kind: 'walk', x: 900 }, facing: 1 }
+    const r = stepLoco(walking, { dtMs: 16, now: 1000, bounds: BOUNDS, canWander: true })
+    expect(r.loco.state).toBe('walk')
+    expect(r.loco.x).toBeGreaterThan(100)
+  })
+
+  it('下落中的物理不受 canWander 影响（不能在空中冻住）', () => {
+    const falling: Loco = { ...initLoco(100, 0, 0), state: 'fall', vx: 0, vy: 200 }
+    const r = stepLoco(falling, { dtMs: 16, now: 1000, bounds: BOUNDS, canWander: false })
+    expect(r.loco.y).toBeGreaterThan(0)
+  })
+})
