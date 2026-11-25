@@ -37,6 +37,8 @@ export const store = new Store<StoreShape>({
     awaySince: 0,
     occasions: [],
     occasionsEnabled: true,
+    dailyNotes: [],
+    lastRecapDay: '',
   },
 })
 

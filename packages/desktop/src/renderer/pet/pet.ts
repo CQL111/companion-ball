@@ -108,6 +108,21 @@ function speakWithReason(obs: Observation): boolean {
 
 /** 每秒评估一次：有没有值得说的事 */
 function evaluateSpeech(): void {
+  // M7：晚间复述今天记的事。一天只一次，错过不补。
+  // 优先级低于事件记忆（明天有事更重要），高于普通闲聊。
+  if (occasionsEnabled) {
+    void window.api.dailyRecapPeek().then((line) => {
+      if (!line) return
+      // 打扰预算与睡眠状态与其他主动开口一致
+      if (Date.now() - lastBubbleAt < 10 * 60 * 1000) return
+      if (petState.mood === 'sleep' || petState.mood === 'doze') return
+      showBubble(line)
+      lastBubbleAt = Date.now()
+      // 说出口即标记；同一天不再重复
+      void window.api.dailyRecapMark()
+    })
+  }
+
   // P1.5：事件记忆的「接住」优先级最高——但它同样占用打扰预算。
   // 这里先问主进程有没有该说的（T-1 / T+1），有就走同一条气泡通道。
   if (occasionsEnabled) {

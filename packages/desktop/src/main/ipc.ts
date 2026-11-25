@@ -12,6 +12,7 @@ import { handleAsk, resetChat } from './chat'
 import { extractMemories, bumpInteraction, ensureDailyDiary, ensureAbsenceDiary } from './remember'
 import * as absence from '../core/absence'
 import * as occasions from './occasions'
+import * as dailyLog from './dailyLog'
 import * as mail from './mail'
 import { createMailWindow } from './mailWindow'
 import * as weather from './weatherService'
@@ -386,6 +387,33 @@ export function registerIpc(): void {
   handle(CH.occasionDebugRemember, (_e, message: unknown) => {
     const text = z.string().max(500).parse(message)
     return occasions.rememberFromMessage(text).map(occasionView)
+  })
+
+  // ---------- 日常记事（M7）----------
+  const dailyView = (n: ReturnType<typeof dailyLog.todayNotes>[number]) => ({
+    id: n.id,
+    text: n.text,
+    day: n.day,
+    at: n.at,
+  })
+
+  handle(CH.dailyRecapPeek, () => dailyLog.peekRecap())
+  handle(CH.dailyRecapMark, () => {
+    dailyLog.markRecapped()
+    return true
+  })
+  handle(CH.dailyNotesList, () => ({
+    days: dailyLog.recentNotes().map((d) => ({ day: d.day, notes: d.notes.map(dailyView) })),
+  }))
+  handle(CH.dailyNoteRemove, (_e, id: unknown) => {
+    const parsed = occasionsIdSchema.safeParse(id)
+    if (!parsed.success) return false
+    return dailyLog.removeNote(parsed.data)
+  })
+  // 测试用：与聊天里说一句话走同一条抽取路径
+  handle(CH.dailyDebugRemember, (_e, message: unknown) => {
+    const text = z.string().max(500).parse(message)
+    return dailyLog.rememberDaily(text)
   })
 
   handle(CH.exportBackup, async () => {

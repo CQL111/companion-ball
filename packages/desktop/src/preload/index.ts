@@ -35,6 +35,12 @@ const api: CompanionApi = {
   occasionPeek: () => ipcRenderer.invoke(CH.occasionPeek),
   occasionConsume: (payload) => ipcRenderer.invoke(CH.occasionConsume, payload),
   occasionDebugRemember: (message: string) => ipcRenderer.invoke(CH.occasionDebugRemember, message),
+  // 日常记事（M7）
+  dailyRecapPeek: () => ipcRenderer.invoke(CH.dailyRecapPeek),
+  dailyRecapMark: () => ipcRenderer.invoke(CH.dailyRecapMark),
+  dailyNotesList: () => ipcRenderer.invoke(CH.dailyNotesList),
+  dailyNoteRemove: (id: string) => ipcRenderer.invoke(CH.dailyNoteRemove, id),
+  dailyDebugRemember: (message: string) => ipcRenderer.invoke(CH.dailyDebugRemember, message),
   exportBackup: () => ipcRenderer.invoke(CH.exportBackup),
   importBackup: () => ipcRenderer.invoke(CH.importBackup),
   bumpInteraction: () => ipcRenderer.invoke(CH.bumpInteraction),

@@ -131,6 +131,18 @@ export interface OccasionsView {
   occasions: OccasionView[]
 }
 
+// ---------- 日常记事（M7）----------
+export interface DailyNoteView {
+  id: string
+  text: string
+  day: string
+  at: number
+}
+
+export interface DailyNotesView {
+  days: Array<{ day: string; notes: DailyNoteView[] }>
+}
+
 export interface OccasionPromptView {
   beat: 'approach' | 'today' | 'followup'
   line: string
@@ -211,6 +223,17 @@ export interface CompanionApi {
   occasionConsume(payload: { beat: 'approach' | 'today' | 'followup'; id: string }): Promise<boolean>
   /** 测试用：走真实抽取路径，返回抽到的条目；仅 e2e 使用 */
   occasionDebugRemember(message: string): Promise<OccasionView[]>
+
+  // 日常记事（M7）
+  /** 今晚该不该复述（null = 不说） */
+  dailyRecapPeek(): Promise<string | null>
+  /** 标记今天已复述 */
+  dailyRecapMark(): Promise<boolean>
+  /** 最近几天的记录 */
+  dailyNotesList(): Promise<DailyNotesView>
+  dailyNoteRemove(id: string): Promise<boolean>
+  /** 测试用：走真实抽取路径 */
+  dailyDebugRemember(message: string): Promise<boolean>
   exportBackup(): Promise<ExportResult>
   importBackup(): Promise<ImportResult>
   bumpInteraction(): Promise<boolean>

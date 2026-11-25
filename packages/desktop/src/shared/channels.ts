@@ -22,6 +22,12 @@ export const CH = {
   occasionConsume: 'occasion-consume',
   /** 测试用：走真实的抽取路径（与聊天里说一句话相同），仅 e2e 使用 */
   occasionDebugRemember: 'occasion-debug-remember',
+  // 日常记事（M7）
+  dailyRecapPeek: 'daily-recap-peek',
+  dailyRecapMark: 'daily-recap-mark',
+  dailyNotesList: 'daily-notes-list',
+  dailyNoteRemove: 'daily-note-remove',
+  dailyDebugRemember: 'daily-debug-remember',
   exportBackup: 'export-backup',
   importBackup: 'import-backup',
   bumpInteraction: 'bump-interaction',

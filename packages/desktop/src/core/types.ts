@@ -48,6 +48,7 @@ import type { Memory } from './memory'
 import type { BottleSettings } from './mailbox'
 import type { Notebook } from './notebook'
 import type { Occasion } from './occasions'
+import type { DailyNote } from './dailyLog'
 
 export interface PetSettings {
   /** 起名；空表示用户还没起名 */
@@ -102,6 +103,13 @@ export interface StoreShape {
   occasions: Occasion[]
   /** 让它记住还没发生的事（默认开） */
   occasionsEnabled: boolean
+  /**
+   * 日常记事（M7）：「今天花了10块」这类带数量的事实。
+   * 只保留最近 7 天，不维护总额。
+   */
+  dailyNotes: DailyNote[]
+  /** 上次晚间复述的日期（一天只复述一次，错过的天不补） */
+  lastRecapDay: string
 }
 
 export type ConfigKey = keyof StoreShape

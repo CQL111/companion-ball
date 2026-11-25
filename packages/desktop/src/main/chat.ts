@@ -19,6 +19,7 @@ import { windows } from './state'
 import { createSettingsWindow } from './windows'
 import { extractMemories, ensureDailyDiary } from './remember'
 import * as occasions from './occasions'
+import * as dailyLog from './dailyLog'
 import type { AgentMessage, ChatReply } from '../shared/types'
 
 export function sendAiInputFocus(win: Electron.BrowserWindow): void {
@@ -75,12 +76,19 @@ export async function handleAsk(rawQuery: string): Promise<ChatReply> {
 
   // P1.5：用户这句话里如果有「未来的事」，先记住（零 token 正则，不受 AI 成败影响）
   const remembered = occasions.rememberFromMessage(query)
+  // M7：如果是「今天花了10块」这类当天的事，也记下
+  const dailyLogged = dailyLog.rememberDaily(query)
   if (remembered.length && remembered[0]) {
     const line = `我记住了：${remembered[0].text}`
     if (windows.aiInput && !windows.aiInput.isDestroyed()) {
       windows.aiInput.webContents.send('ai-agent-progress', { tool: 'memory', label: line })
     }
     logger.info('occasion.chat', `remembered ${remembered[0].kind} @ ${remembered[0].date}`)
+  } else if (dailyLogged) {
+    // 日常记事只回一句「嗯，记下了」——不打断、不追问、不评价
+    if (windows.aiInput && !windows.aiInput.isDestroyed()) {
+      windows.aiInput.webContents.send('ai-agent-progress', { tool: 'memory', label: '嗯，记下了。' })
+    }
   }
 
   const sendProgress = (info: { tool: string; label: string }): void => {
