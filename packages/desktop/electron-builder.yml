@@ -4,6 +4,8 @@
 # 注意：先跑 electron-vite 构建（npm run build），本配置只负责打包应用外框。
 appId: com.companion.ball
 productName: companion-ball
+# monorepo: electron 提升到根 node_modules，electron-builder 解析不到版本，需显式指定
+electronVersion: 30.5.1
 directories:
   # 产物目录（不用 dist/release，避免被编辑器索引占用导致 EBUSY）
   output: out-release
