@@ -174,16 +174,33 @@ const CONTRACTS_DIR = path.join(ROOT, 'packages', 'contracts', 'src');
 | `scripts/build-site.js` | 产物 → `docs/index.html` → GitHub Pages | 私有仓库 Pages 需 Pro |
 | `scripts/publish-github.js` | 上传到 GitHub Release | 私有仓库 Release 不公开 |
 
-### 切换（S0 先做最小版）
+### 切换（S0-5，代码已就绪，待填凭证）
 
-1. **安装包上传 R2**：`publish-github.js` 增加 `--target r2`，或新写 `scripts/publish-r2.js`
+> 2026-11-25 已实现，全部走环境变量（见 `.env.example`），不需要改代码。
+
+1. **安装包上传 R2**：`scripts/publish-r2.js`（零依赖 SigV4，见 `scripts/r2.js`）
    - 对象键：`releases/v{version}/{artifactName}`
-   - 同时上传 `latest.json`（版本号、文件名、SHA-256、发布日期）
-2. **站点下载页**：`packages/web`（S5 才有）之前，先在 `product-intro.html` 里把下载按钮指向
-   `https://download.<域名>/latest`，由 R2 的公开域名直接服务
-3. **GitHub Release 仅作内部记录**：保留 tag 与 notes，不再上传安装包资产
+   - 同时上传 `latest.json`（版本号、文件名、SHA-256、大小、发布日期）
+   - `release.js` 按 `PUBLISH_TARGET=r2|github` 选择目标，**默认 r2**
+2. **站点下载页**：`packages/web/product-intro.html` 从 `/v1/download/manifest` 读版本，
+   按钮指向 `/v1/download/latest?os=win`（302 到 R2）；失败时按钮自动置灰
+3. **GitHub Release 仅作内部记录**：tag 与 notes 保留，不再上传安装包资产
 
-> S0 阶段可**先只做 1 和 2 的占位**：把下载链接改成配置项，等域名申请下来再填真实值。
+需要的环境变量（仓库根 `.env`，已被 gitignore）：
+
+| 变量 | 说明 |
+|---|---|
+| `CF_ACCOUNT_ID` | Cloudflare 账号 ID |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | R2 API Token（Object Read & Write） |
+| `R2_BUCKET` | 桶名 |
+| `R2_PUBLIC_BASE_URL` | R2 公开域名（自定义域 / r2.dev） |
+| `PUBLISH_TARGET` | `r2`（默认）或 `github` |
+
+验证方式（不需要真实凭证）：
+
+```bash
+node scripts/publish-r2.js 0.9.1 <dist目录> --dry-run   # 打印计划与 latest.json
+```
 
 ## 六、CI（GitHub Actions）
 

@@ -11,6 +11,12 @@ binding = "DB"
 database_name = "companion-bottles"
 database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
 
+# 安装包分发：与 scripts/publish-r2.js 写同一个桶（latest.json + releases/**）
+# 建桶：npx wrangler r2 bucket create companion-downloads
+[[r2_buckets]]
+binding = "DOWNLOADS"
+bucket_name = "companion-downloads"
+
 [vars]
 BOTTLE_TTL_DAYS = "7"
 MAX_PICKS = "3"
@@ -18,6 +24,8 @@ DAILY_BOTTLE_LIMIT = "3"
 DAILY_REPLY_LIMIT = "10"
 # 设为 "1" 立即关闭所有写接口（紧急开关）
 EMERGENCY_OFF = "0"
+# 没有 DOWNLOADS 绑定时，从公开域名读 latest.json（填 R2 自定义域）
+R2_PUBLIC_BASE_URL = ""
 
 [observability]
 enabled = true

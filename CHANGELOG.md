@@ -36,14 +36,24 @@
 - `docs/ROADMAP.md` 重排：新增第四根支柱「期待」，私人闭环先于社交公开化，每阶段设闸门
 - `docs/ARCHITECTURE.md` / `SERVER.md` / `TESTING-BOTTLE.md` / `README.md` 路径同步
 
+### 新增：安装包改由站点分发（S0-5）
+- `scripts/r2.js`：**零依赖** R2 上传（自签 AWS SigV4，path-style 端点），无需 aws-sdk
+- `scripts/publish-r2.js`：上传安装包到 `releases/vX.Y.Z/`，维护 `latest.json`（含 SHA-256），支持 `--dry-run`
+- `release.js`：新增 `PUBLISH_TARGET=r2|github`，**默认 r2**（私有仓库后 GitHub Release 不再公开）
+- 服务端新增公开只读接口：`GET /v1/download/manifest`、`GET /v1/download/latest?os=win|mac`（302 到 R2，校验域名防开放重定向）
+- 产品页下载按钮改为读取 manifest，取不到版本时自动置灰；页面内不再出现 GitHub 下载链接
+- 外部资源全部走环境变量（`CF_ACCOUNT_ID` / `R2_*` / `SITE_ORIGIN`），见 `.env.example`
+- 新增 5 条单测：SigV4 对照 **AWS 官方测试向量**、path-style 路径、环境变量校验、publicUrl
+
 ### 修复
 - `build/entitlements.mac.plist`（macOS 签名配置）在迁移中被 `.gitignore` 误吞，已从历史恢复
 
 ### 验证
-- `npm test` → **231 通过**（16 个测试文件）+ core 边界与契约零依赖检查通过
+- `npm test` → **236 通过**（17 个测试文件）+ core 边界与契约零依赖检查通过
 - `npm run typecheck` → 桌面端两套 + 契约；`npm run check:server` → 通过
 - `npm run build` + `npm run test:e2e` → **17/17 通过**（含真实 AI 对话）
 - `npm run mock:bottle` / `npm run build:site` / `npm run build:legal` 均正常
+- `node scripts/publish-r2.js --dry-run` → 输出正确的资产计划与 `latest.json`
 
 ## [0.9.0] — 可信的主动：每句话都有原因 + 它需要你（2026-11-23）
 

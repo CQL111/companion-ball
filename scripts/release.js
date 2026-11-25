@@ -126,11 +126,27 @@ run(`git tag -a ${tagName} -m "release ${tagName}"`);
 console.log('\n📤 推送到远程...');
 run('git push origin HEAD --follow-tags');
 
-// ---------- 9. 上传并校验 Release ----------
-// 不用 electron-builder --publish always：它会在并发生成产物时重复创建同名 Release，
-// 且部分失败会留下只传了一半资产的 Release。见 scripts/publish-github.js。
-console.log('\n📤 上传 Release 资产并校验...');
-run(`node scripts/publish-github.js ${version} "${path.relative(ROOT, distDir)}"`);
+// ---------- 9. 上传资产 ----------
+// 目标由 PUBLISH_TARGET 决定（默认 r2：私有仓库后 GitHub Release 不再对公众可见）：
+//   r2       → scripts/publish-r2.js（R2 + latest.json，站点下载页分发）
+//   github   → scripts/publish-github.js（仅作内部记录 / 过渡期）
+// 不用 electron-builder --publish always：并发生成产物时会重复创建同名 Release，
+// 且部分失败会留下只传了一半资产的 Release。
+const target = String(process.env.PUBLISH_TARGET || 'r2').toLowerCase();
+if (target === 'github') {
+  console.log('\n📤 上传 Release 资产并校验（PUBLISH_TARGET=github）...');
+  run(`node scripts/publish-github.js ${version} "${path.relative(ROOT, distDir)}"`);
+} else if (target === 'r2') {
+  console.log('\n📤 上传安装包到 R2 并更新 latest.json...');
+  run(`node scripts/publish-r2.js ${version} "${path.relative(ROOT, distDir)}"`);
+} else {
+  fail(`未知的 PUBLISH_TARGET "${target}"，可用：r2 / github`);
+}
 
 console.log('\n✅ 发布完成：');
-console.log(`   https://github.com/CQL111/companion-ball/releases/tag/${tagName}`);
+if (target === 'r2') {
+  console.log('   tag：', tagName);
+  console.log('   下载：', (process.env.R2_PUBLIC_BASE_URL || '(未配置 R2_PUBLIC_BASE_URL)').replace(/\/+$/, '') + '/latest.json');
+} else {
+  console.log(`   https://github.com/CQL111/companion-ball/releases/tag/${tagName}`);
+}

@@ -32,6 +32,7 @@
     "release:patch": "node scripts/release.js patch",
     "release:minor": "node scripts/release.js minor",
     "release:major": "node scripts/release.js major",
+    "publish:r2": "node scripts/publish-r2.js",
     "build:skin": "npm run build:skin -w @companion/desktop",
     "pack:skin": "npm run pack:skin -w @companion/desktop",
     "build:site": "npm run build:site -w @companion/web",

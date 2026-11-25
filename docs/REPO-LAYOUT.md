@@ -46,8 +46,8 @@ companion-ball/            仓库根：只放编排、共享文档、跨包验�
 │   └── admin/             （S5）审核 / 新闻 / 指标 / 开关 SPA
 │
 ├── docs/                      产品 / 架构 / 平台文档 + legal/（法律文案唯一源）
-├── scripts/                   仅剩跨包脚本：check-core-boundary · release · publish-github
-├── .env                       （不入库）开发 Key；服务端配置走 wrangler secret
+├── scripts/                   跨包脚本：check-core-boundary · release · publish-github · publish-r2 · r2
+├── .env                       （不入库）开发 Key + R2 凭证；服务端配置走 wrangler secret
 ├── CHANGELOG.md · README.md · AGENTS.md · CLAUDE.md
 └── package.json               private + workspaces，只做编排
 ```
@@ -112,6 +112,6 @@ npm run build:site                # 产品页 → docs/index.html
 - [x] **S0-3** `server/` → `packages/server`
 - [x] **S0-4** 守卫 / tsconfig / vite 别名 / 脚本路径适配
 - [x] **S0-4b** 桌面端迁入 `packages/desktop`（src / tests / 配置 / 资源 / 脚本 / 构建配置）
-- [ ] S0-5 发布渠道（R2 + 站点下载页）
+- [x] **S0-5** 发布渠道：`scripts/publish-r2.js`（零依赖 SigV4）+ 站点下载页 + `/v1/download/*`
 - [ ] S0-6 CI（路径过滤）
 - [ ] S0-7 部署 S3（需 Cloudflare 账号）

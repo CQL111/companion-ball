@@ -26,6 +26,9 @@ export interface Env {
   DAILY_BOTTLE_LIMIT: string
   DAILY_REPLY_LIMIT: string
   EMERGENCY_OFF: string
+  /** 安装包分发（R2 绑定）；未绑定时回退到 R2_PUBLIC_BASE_URL */
+  DOWNLOADS?: R2Bucket
+  R2_PUBLIC_BASE_URL?: string
 }
 
 interface Ctx {
@@ -223,10 +226,78 @@ async function report(req: Request, env: Env, tokenHash: string, now: number): P
   return json({ ok: true })
 }
 
+// ---------- 下载（公开只读，不需要设备令牌） ----------
+
+/** 读取 latest.json：优先 R2 绑定，其次公开域名；都没有则返回 null */
+async function readManifest(env: Env): Promise<Record<string, unknown> | null> {
+  if (env.DOWNLOADS) {
+    const obj = await env.DOWNLOADS.get('latest.json')
+    if (obj) {
+      try {
+        return JSON.parse(await obj.text())
+      } catch {
+        return null
+      }
+    }
+    return null
+  }
+  const base = String(env.R2_PUBLIC_BASE_URL || '').replace(/\/+$/, '')
+  if (!base) return null
+  const res = await fetch(`${base}/latest.json`, { cf: { cacheTtl: 60 } as never })
+  if (!res.ok) return null
+  try {
+    return (await res.json()) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+/** GET /v1/download/manifest —— 版本号 + 各平台资产地址与校验值 */
+async function downloadManifest(env: Env): Promise<Response> {
+  const m = await readManifest(env)
+  if (!m) return json({ ok: false, error: 'NO_RELEASE' }, 503)
+  return json({ ok: true, ...m })
+}
+
+/** GET /v1/download/latest?os=win|mac —— 302 到最新安装包 */
+async function downloadLatest(env: Env, url: URL): Promise<Response> {
+  const os = (url.searchParams.get('os') || 'win').toLowerCase()
+  if (os !== 'win' && os !== 'mac') return err('BAD_OS', 400)
+
+  const m = await readManifest(env)
+  const assets = (m?.assets || {}) as Record<string, { url?: string } | undefined>
+  const target = assets[os]?.url
+  if (!target) return json({ ok: false, error: 'NO_RELEASE' }, 503)
+
+  // 只跳向配置好的下载域，避免开放重定向
+  const base = String(env.R2_PUBLIC_BASE_URL || '').replace(/\/+$/, '')
+  if (base && !target.startsWith(base)) return json({ ok: false, error: 'BAD_TARGET' }, 500)
+
+  return new Response(null, {
+    status: 302,
+    headers: { Location: target, 'Cache-Control': 'no-store' },
+  })
+}
+
 // ---------- 入口 ----------
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url)
+
+    // 下载接口是公开 GET，不需要设备令牌
+    if (req.method === 'GET') {
+      try {
+        if (url.pathname === '/v1/download/manifest') return await downloadManifest(env)
+        if (url.pathname === '/v1/download/latest') return await downloadLatest(env, url)
+        if (url.pathname === '/v1/health') {
+          return json({ ok: true, paused: env.EMERGENCY_OFF === '1' })
+        }
+        return err('NOT_FOUND', 404)
+      } catch {
+        return err('INTERNAL', 500)
+      }
+    }
+
     if (req.method !== 'POST') return err('METHOD_NOT_ALLOWED', 405)
 
     const authResult = await auth(req, env)
