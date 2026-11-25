@@ -12,9 +12,31 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
+/**
+ * 强制 IPv4 的 fetch。
+ *
+ * 为什么需要：某些网络环境下 `*.r2.cloudflarestorage.com` 会解析到 IPv6 并连接失败
+ * （Node 报 EAI_AGAIN，而 curl 强制 -4 却正常）。实测同机器 curl 可用、Node fetch 不可用，
+ * 是 undici 的连接选择与系统栈不一致导致的。这里统一指定 IPv4 + 超时。
+ *
+ * undici 是 Node 内置依赖（不需额外安装）。
+ */
+let dispatcherInstalled = false
+function ensureDispatcher() {
+  if (dispatcherInstalled) return
+  try {
+    const { Agent, setGlobalDispatcher } = require('undici')
+    setGlobalDispatcher(new Agent({ connect: { family: 4, timeout: 30_000 }, headersTimeout: 120_000 }))
+    dispatcherInstalled = true
+  } catch {
+    // 老版本 Node 没有 undici 时退回默认行为（不阻断）
+  }
+}
+
 const REQUIRED = ['CF_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'];
 
 function readConfig(env = process.env) {
+  ensureDispatcher()
   const missing = REQUIRED.filter((k) => !String(env[k] || '').trim());
   if (missing.length) {
     const err = new Error(
