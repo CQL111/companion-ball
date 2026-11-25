@@ -230,6 +230,19 @@ async function report(req: Request, env: Env, tokenHash: string, now: number): P
 
 /** 读取 latest.json：优先 R2 绑定，其次公开域名；都没有则返回 null */
 async function readManifest(env: Env): Promise<Record<string, unknown> | null> {
+  const base = String(env.R2_PUBLIC_BASE_URL || '').replace(/\/+$/, '')
+  // 走公开域而不是 R2 绑定：绑定读到的是上传瞬间的版本，公开域由 CDN 提供，
+  // 且避免 Worker 里多一次对象读取。只有在配置了域名时才走这条。
+  if (base) {
+    const res = await fetch(`${base}/latest.json`, { cf: { cacheTtl: 60 } as never })
+    if (res.ok) {
+      try {
+        return (await res.json()) as Record<string, unknown>
+      } catch {
+        /* 落到绑定分支 */
+      }
+    }
+  }
   if (env.DOWNLOADS) {
     const obj = await env.DOWNLOADS.get('latest.json')
     if (obj) {
@@ -239,17 +252,8 @@ async function readManifest(env: Env): Promise<Record<string, unknown> | null> {
         return null
       }
     }
-    return null
   }
-  const base = String(env.R2_PUBLIC_BASE_URL || '').replace(/\/+$/, '')
-  if (!base) return null
-  const res = await fetch(`${base}/latest.json`, { cf: { cacheTtl: 60 } as never })
-  if (!res.ok) return null
-  try {
-    return (await res.json()) as Record<string, unknown>
-  } catch {
-    return null
-  }
+  return null
 }
 
 /** GET /v1/download/manifest —— 版本号 + 各平台资产地址与校验值 */

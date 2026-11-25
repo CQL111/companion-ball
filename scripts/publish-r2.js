@@ -31,7 +31,9 @@ const version = args[0] || desktopPkg.version;
 const distDir = path.resolve(ROOT, args[1] || path.join('packages/desktop/dist-public', version));
 const tag = `v${version}`;
 
-const ALLOWED = /\.(exe|dmg|zip|blockmap|yml)$/i;
+// 目录里会混入 electron-builder 的调试文件，不能当作发布资产
+const ALLOWED = /\.(exe|dmg|zip|blockmap|ya?ml)$/i;
+const EXCLUDED = [/^builder-debug\.ya?ml$/i, /^builder-effective-config\.ya?ml$/i];
 
 function listAssets() {
   if (!fs.existsSync(distDir)) {
@@ -41,7 +43,7 @@ function listAssets() {
   }
   return fs
     .readdirSync(distDir)
-    .filter((f) => ALLOWED.test(f))
+    .filter((f) => ALLOWED.test(f) && !EXCLUDED.some((re) => re.test(f)))
     .sort();
 }
 
