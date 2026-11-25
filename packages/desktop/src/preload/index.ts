@@ -28,6 +28,13 @@ const api: CompanionApi = {
   deleteMemory: (id) => ipcRenderer.invoke(CH.deleteMemory, id),
   clearMemories: () => ipcRenderer.invoke(CH.clearMemories),
   setMemoryEnabled: (enabled) => ipcRenderer.invoke(CH.setMemoryEnabled, enabled),
+  // 事件记忆（P1.5）
+  occasionsList: () => ipcRenderer.invoke(CH.occasionsList),
+  occasionsDismiss: (id: string) => ipcRenderer.invoke(CH.occasionsDismiss, id),
+  occasionsSetEnabled: (enabled: boolean) => ipcRenderer.invoke(CH.occasionsSetEnabled, enabled),
+  occasionPeek: () => ipcRenderer.invoke(CH.occasionPeek),
+  occasionConsume: (payload) => ipcRenderer.invoke(CH.occasionConsume, payload),
+  occasionDebugRemember: (message: string) => ipcRenderer.invoke(CH.occasionDebugRemember, message),
   exportBackup: () => ipcRenderer.invoke(CH.exportBackup),
   importBackup: () => ipcRenderer.invoke(CH.importBackup),
   bumpInteraction: () => ipcRenderer.invoke(CH.bumpInteraction),

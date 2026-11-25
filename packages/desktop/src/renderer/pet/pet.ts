@@ -32,6 +32,8 @@ import skinManifest from './skins/placeholder/manifest.json'
 let needMotionUntil = 0
 /** 测试/演示用：强制睡眠，覆盖状态机按时间推算出的情绪 */
 let forceSleep = false
+/** P1.5：是否让主进程评估「有日期的事实」（设置里可关） */
+let occasionsEnabled = true
 
 const ball = document.getElementById('ball') as HTMLDivElement
 const ballInner = document.getElementById('ball-inner') as HTMLDivElement
@@ -106,6 +108,22 @@ function speakWithReason(obs: Observation): boolean {
 
 /** 每秒评估一次：有没有值得说的事 */
 function evaluateSpeech(): void {
+  // P1.5：事件记忆的「接住」优先级最高——但它同样占用打扰预算。
+  // 这里先问主进程有没有该说的（T-1 / T+1），有就走同一条气泡通道。
+  if (occasionsEnabled) {
+    void window.api.occasionPeek().then((prompt) => {
+      if (!prompt) return
+      // 当天不弹气泡：用身体动作（见 locoFrame），台词留到用户主动点它
+      if (prompt.beat === 'today') return
+      // 打扰预算：10 分钟内的任何主动开口都算数
+      if (Date.now() - lastBubbleAt < 10 * 60 * 1000) return
+      if (petState.mood === 'sleep' || petState.mood === 'doze') return
+      showBubble(prompt.line)
+      lastBubbleAt = Date.now()
+      void window.api.occasionConsume({ beat: prompt.beat, id: prompt.occasion.id })
+    })
+  }
+
   // 需求：到点冒一个
   const pending = nextNeed(needs, Date.now())
   if (pending) needs = reduceNeeds(needs, { type: 'raise', now: Date.now(), kind: pending })

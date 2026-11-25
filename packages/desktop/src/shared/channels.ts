@@ -14,6 +14,14 @@ export const CH = {
   deleteMemory: 'delete-memory',
   clearMemories: 'clear-memories',
   setMemoryEnabled: 'set-memory-enabled',
+  // 事件记忆（P1.5）：带日期的事实
+  occasionsList: 'occasions-list',
+  occasionsDismiss: 'occasions-dismiss',
+  occasionsSetEnabled: 'occasions-set-enabled',
+  occasionPeek: 'occasion-peek',
+  occasionConsume: 'occasion-consume',
+  /** 测试用：走真实的抽取路径（与聊天里说一句话相同），仅 e2e 使用 */
+  occasionDebugRemember: 'occasion-debug-remember',
   exportBackup: 'export-backup',
   importBackup: 'import-backup',
   bumpInteraction: 'bump-interaction',

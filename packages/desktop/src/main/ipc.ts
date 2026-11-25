@@ -11,6 +11,7 @@ import { logger } from './services/logger'
 import { handleAsk, resetChat } from './chat'
 import { extractMemories, bumpInteraction, ensureDailyDiary, ensureAbsenceDiary } from './remember'
 import * as absence from '../core/absence'
+import * as occasions from './occasions'
 import * as mail from './mail'
 import { createMailWindow } from './mailWindow'
 import * as weather from './weatherService'
@@ -42,7 +43,7 @@ import {
 } from './windows'
 import { PERSONAS, broadcastPersona, rebuildTrayMenu, resetBallPosition } from './tray'
 import { CH, EV } from '../shared/channels'
-import { configKeySchema, debugAwayMsSchema, localModelSchema, memoryIdSchema, petNameSchema, rectSchema } from '../shared/ipc'
+import { configKeySchema, debugAwayMsSchema, localModelSchema, memoryIdSchema, occasionConsumeSchema, occasionsIdSchema, petNameSchema, rectSchema } from '../shared/ipc'
 import type { AiConfig, Persona } from '../shared/types'
 
 type WeatherStatusPlace = { city: string; label: string; latitude: number; longitude: number }
@@ -331,6 +332,60 @@ export function registerIpc(): void {
     store.set('memoryEnabled', enabled !== false)
     logger.info('memory.enabled', String(enabled !== false))
     return true
+  })
+
+  // ---------- 事件记忆（P1.5）----------
+  const occasionView = (o: ReturnType<typeof occasions.listOccasions>[number]) => ({
+    id: o.id,
+    text: o.text,
+    kind: o.kind,
+    date: o.date,
+    status: o.status,
+    certainty: o.certainty,
+  })
+
+  handle(CH.occasionsList, () => ({
+    enabled: store.get('occasionsEnabled') !== false,
+    max: 10,
+    occasions: occasions.listOccasions().map(occasionView),
+  }))
+
+  handle(CH.occasionsDismiss, (_e, id: unknown) => {
+    const parsed = occasionsIdSchema.safeParse(id)
+    if (!parsed.success) return false
+    return occasions.dismiss(parsed.data)
+  })
+
+  handle(CH.occasionsSetEnabled, (_e, enabled: unknown) => {
+    occasions.setEnabled(enabled !== false)
+    return {
+      enabled: store.get('occasionsEnabled') !== false,
+      max: 10,
+      occasions: occasions.listOccasions().map(occasionView),
+    }
+  })
+
+  handle(CH.occasionPeek, () => {
+    const p = occasions.peekBeat()
+    if (!p) return null
+    return { beat: p.beat, line: p.line, occasion: occasionView(p.occasion) }
+  })
+
+  handle(CH.occasionConsume, (_e, payload: unknown) => {
+    const p = occasionConsumeSchema.safeParse(payload)
+    if (!p.success) return false
+    const list = occasions.listOccasions()
+    const target = list.find((o) => o.id === p.data.id)
+    if (!target) return false
+    // 复用 core 的 markBeat：只标记，不重新推演状态
+    occasions.consumeBeat({ beat: p.data.beat, occasion: target, line: '' })
+    return true
+  })
+
+  // 测试用：与聊天里说一句话走同一条抽取路径
+  handle(CH.occasionDebugRemember, (_e, message: unknown) => {
+    const text = z.string().max(500).parse(message)
+    return occasions.rememberFromMessage(text).map(occasionView)
   })
 
   handle(CH.exportBackup, async () => {

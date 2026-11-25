@@ -113,6 +113,30 @@ export interface MemoryListResult {
   memories: MemoryView[]
 }
 
+// ---------- 事件记忆（P1.5）----------
+/** 一条有日期的事实，给界面看 */
+export interface OccasionView {
+  id: string
+  text: string
+  kind: string
+  /** YYYY-MM-DD */
+  date: string
+  status: 'upcoming' | 'passed' | 'dismissed'
+  certainty: 'vague' | 'day'
+}
+
+export interface OccasionsView {
+  enabled: boolean
+  max: number
+  occasions: OccasionView[]
+}
+
+export interface OccasionPromptView {
+  beat: 'approach' | 'today' | 'followup'
+  line: string
+  occasion: OccasionView
+}
+
 export interface ExportResult {
   ok: boolean
   path?: string
@@ -178,6 +202,15 @@ export interface CompanionApi {
   deleteMemory(id: string): Promise<MemoryListResult>
   clearMemories(): Promise<MemoryListResult>
   setMemoryEnabled(enabled: boolean): Promise<boolean>
+  /** P1.5 事件记忆：列表 / 划掉 / 开关 */
+  occasionsList(): Promise<OccasionsView>
+  occasionsDismiss(id: string): Promise<boolean>
+  occasionsSetEnabled(enabled: boolean): Promise<OccasionsView>
+  /** 渲染端每秒问一次：有没有该「接住」的事 */
+  occasionPeek(): Promise<OccasionPromptView | null>
+  occasionConsume(payload: { beat: 'approach' | 'today' | 'followup'; id: string }): Promise<boolean>
+  /** 测试用：走真实抽取路径，返回抽到的条目；仅 e2e 使用 */
+  occasionDebugRemember(message: string): Promise<OccasionView[]>
   exportBackup(): Promise<ExportResult>
   importBackup(): Promise<ImportResult>
   bumpInteraction(): Promise<boolean>

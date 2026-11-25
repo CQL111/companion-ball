@@ -47,6 +47,7 @@ export interface ScreenInfo {
 import type { Memory } from './memory'
 import type { BottleSettings } from './mailbox'
 import type { Notebook } from './notebook'
+import type { Occasion } from './occasions'
 
 export interface PetSettings {
   /** 起名；空表示用户还没起名 */
@@ -94,6 +95,13 @@ export interface StoreShape {
    * 0 = 没有待处理的缺席；回来时据此生成日记并清零。
    */
   awaySince: number
+  /**
+   * 事件记忆（P1.5）：带日期的事实。
+   * 与 memories（普通事实）分开存储，不占 30 条上限。
+   */
+  occasions: Occasion[]
+  /** 让它记住还没发生的事（默认开） */
+  occasionsEnabled: boolean
 }
 
 export type ConfigKey = keyof StoreShape

@@ -33,6 +33,13 @@ export const debugAwayMsSchema = z
   .min(3600_000)
   .max(30 * 24 * 3600_000)
 
+// ---------- 事件记忆（P1.5）----------
+export const occasionsIdSchema = z.string().max(80)
+export const occasionConsumeSchema = z.object({
+  beat: z.enum(['approach', 'today', 'followup']),
+  id: z.string().max(80),
+})
+
 export const configKeySchema = z.enum([
   'position', 'autoStart', 'aiConfig', 'localModel', 'installId',
   'persona', 'agentChat', 'consentVersion', 'animations', 'pet', 'sound', 'sitReminder', 'weather', 'memories', 'notebook', 'memoryEnabled',

@@ -11,6 +11,7 @@ import * as onlineConfig from './services/onlineConfig'
 import { logger } from './services/logger'
 import type { Memory } from '../core/memory'
 import type { Notebook } from '../core/notebook'
+import type { Occasion } from '../core/occasions'
 
 export const store = new Store<StoreShape>({
   name: 'config',
@@ -34,6 +35,8 @@ export const store = new Store<StoreShape>({
     bottle: { enabled: false, endpoint: '', lastOutAt: 0, lastPickedAt: 0 },
     bottleThrownToday: { day: '', n: 0 },
     awaySince: 0,
+    occasions: [],
+    occasionsEnabled: true,
   },
 })
 
@@ -188,6 +191,25 @@ export function getNotebook(): Notebook {
 
 export function setNotebook(next: Notebook): void {
   store.set('notebook', next)
+}
+
+// ---------- 事件记忆（P1.5）----------
+export function getOccasions(): Occasion[] {
+  const list = store.get('occasions')
+  return Array.isArray(list) ? list : []
+}
+
+export function setOccasions(next: Occasion[]): void {
+  store.set('occasions', next)
+}
+
+/** 「让它记住还没发生的事」开关（默认开） */
+export function isOccasionsEnabled(): boolean {
+  return store.get('occasionsEnabled') !== false
+}
+
+export function setOccasionsEnabled(enabled: boolean): void {
+  store.set('occasionsEnabled', enabled !== false)
 }
 
 // ---------- 起名 ----------

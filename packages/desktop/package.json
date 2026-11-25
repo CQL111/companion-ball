@@ -8,7 +8,7 @@
     "dev": "npm run build:legal && electron-vite dev",
     "start": "electron-vite preview",
     "start:hidden": "electron-vite preview -- --hidden",
-    "test": "vitest run && node ../../scripts/check-core-boundary.js",
+    "test": "vitest run && node ../../scripts/check-core-boundary.js && node ../../scripts/check-docs.js",
     "test:e2e": "node tests/e2e/smoke.mjs",
     "test:watch": "vitest",
     "test:all": "npm test && npm run build && npm run test:e2e",
