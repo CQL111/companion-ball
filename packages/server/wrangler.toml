@@ -3,13 +3,13 @@
 # 设计与风险见 docs/SERVER.md
 
 name = "companion-bottles"
-main = "src/index.ts"
+main = "src/worker.ts"
 compatibility_date = "2026-11-01"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "companion-bottles"
-database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+database_id = "36aa87e1-ddee-4c71-96be-fb0157814046"
 
 # 安装包分发：与 scripts/publish-r2.js 写同一个桶（latest.json + releases/**）
 # 建桶：npx wrangler r2 bucket create companion-downloads
@@ -22,7 +22,7 @@ bucket_name = "companion-downloads"
 # 把返回的 id 填到下面
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "a875ed6664084d11aa5cc30535d35550"
 
 [vars]
 BOTTLE_TTL_DAYS = "7"
@@ -31,10 +31,14 @@ DAILY_BOTTLE_LIMIT = "3"
 DAILY_REPLY_LIMIT = "10"
 # 单 IP 每分钟写请求上限（只计 POST）
 IP_RATE_LIMIT_PER_MIN = "30"
+# 单设备速率（与 docs/SERVER.md 的接口表一致）
+PICK_PER_HOUR = "10"
+INBOX_PER_HOUR = "20"
+REPORT_PER_DAY = "20"
 # 设为 "1" 立即关闭所有写接口（紧急开关）
 EMERGENCY_OFF = "0"
 # 没有 DOWNLOADS 绑定时，从公开域名读 latest.json（填 R2 自定义域）
-R2_PUBLIC_BASE_URL = ""
+R2_PUBLIC_BASE_URL = "https://pub-2afefb77a14d4190ad7ec081cdf6bde5.r2.dev"
 
 [observability]
 enabled = true

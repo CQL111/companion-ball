@@ -53,11 +53,21 @@ describe('契约唯一源', () => {
     expect(src).not.toMatch(/export function checkText/)
   })
 
-  it('服务端不再存在手抄副本，index.ts 从契约包引用', () => {
+  it('服务端不再存在手抄副本，业务从契约包引用', () => {
     expect(fs.existsSync(path.join(SERVER_SRC, 'rules.ts'))).toBe(false)
-    const index = fs.readFileSync(path.join(SERVER_SRC, 'index.ts'), 'utf8')
-    expect(index).toContain("from '@companion/contracts'")
-    expect(index).not.toMatch(/from '\.\/rules'/)
+    const handler = fs.readFileSync(path.join(SERVER_SRC, 'handler.ts'), 'utf8')
+    expect(handler).toContain("from '@companion/contracts'")
+    expect(handler).not.toMatch(/from '\.\/rules'/)
+  })
+
+  it('服务端业务层不依赖任何平台类型（D1Database / node:）', () => {
+    const handler = fs.readFileSync(path.join(SERVER_SRC, 'handler.ts'), 'utf8')
+    const db = fs.readFileSync(path.join(SERVER_SRC, 'db.ts'), 'utf8')
+    // 业务层必须平台无关：两个运行时（Workers / Node）共用它
+    expect(handler, 'handler 不应出现 D1Database').not.toMatch(/D1Database/)
+    expect(handler, 'handler 不应 import node:').not.toMatch(/from ['"]node:/)
+    // D1Database 只允许出现在适配器文件 db.ts 里
+    expect(db).toMatch(/D1Database/)
   })
 
   it('contracts 包零平台依赖、零运行时依赖', () => {

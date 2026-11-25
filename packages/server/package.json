@@ -4,17 +4,25 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "build": "node build.mjs",
+    "start": "node --experimental-sqlite dist/node.mjs",
+    "start:prod": "node dist/node.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute companion-bottles --file=./schema.sql --remote",
     "db:init:local": "wrangler d1 execute companion-bottles --file=./schema.sql --local",
     "typecheck": "tsc --noEmit"
   },
+  "engines": {
+    "node": ">=22.5"
+  },
   "dependencies": {
     "@companion/contracts": "*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261118.1",
+    "@types/node": "^22.20.5",
+    "esbuild": "^0.25.0",
     "typescript": "^5.9.3",
     "wrangler": "^4.0.0"
   }

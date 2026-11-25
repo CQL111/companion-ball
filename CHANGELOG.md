@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.9.3] — 服务端支持自建 VPS（未发布）
+
+> 起因：`*.workers.dev` 子域在国内不可达（实测 `workers-playground` 同样 000），
+> Cloudflare 方案对目标用户等于不可用。r2.dev 不受影响，所以下载不受影响。
+>
+> 做法：把服务端改成「**一套业务逻辑，两个运行时**」，VPS 与 Workers 共用同一份业务代码。
+
+### 新增：平台无关业务层
+- `packages/server/src/handler.ts`：输入标准 `Request`、输出标准 `Response`，不出现任何平台类型
+- `packages/server/src/db.ts`：最小 `Db` 接口 + `d1Adapter`（Workers）/ `sqliteAdapter`（Node 内置 sqlite）
+- `packages/server/src/worker.ts`：Workers 薄适配（原 `index.ts` 拆分而来）
+- `packages/server/src/node.ts`：Node 22.5+ 运行时（`node:http` + `node:sqlite`），**零第三方依赖**
+- `packages/server/build.mjs`：esbuild 打包成单文件 `dist/node.mjs`
+
+### 修复（独立审查发现的 20 项缺陷中的高危项）
+- **IDOR（P0）**：`/v1/report` 原本任何人可用任意 `bottleId` 下架任何瓶子；
+  现在只能举报**自己捡到过或自己写的**内容
+- **举报无闸（P0）**：`EMERGENCY_OFF` 原本拦不住举报；现在所有写接口统一受开关约束，
+  并加单设备每日 20 次上限
+- **开放重定向（P1）**：下载跳转原来是前缀匹配，`https://good.example.evil.com` 能过；
+  改为同源比较
+- **IP 限流可伪造（P1）**：`CF-Connecting-IP` 在外网可被任意伪造；新增 `TRUST_PROXY`
+  （默认关闭），只信反代写入的头，否则只认 socket 地址
+- **时区刷额度（P1）**：自报 `utcOffsetMinutes` 可多拿一个「日额度」；改为取服务端日与
+  客户端日中更早者，撒谎只会更紧
+- **并发双写（P1）**：捡瓶/回信原本「先读后写」；改为**条件 UPDATE 原子占位**并检查
+  `changes`，实测 10 并发捡同一瓶不超卖、并发回信只成功一个
+- **错误不可见（P1）**：Node 侧 `catch {}` 吞掉所有异常；现在打印方法与路径
+- **多进程锁（P1）**：SQLite 开 `WAL` + `busy_timeout=5000`，单连接串行执行器，`BEGIN IMMEDIATE`
+- **启动静默失败（P1）**：`schema.sql` 缺失时原本照常监听但接口全 500；现在直接退出
+- **端口占用崩溃（P2）**：`listen` 增加 `error` 处理，给出可读错误
+- **请求体无上限（P2）**：超过 64KB 返回 413
+- **下游无超时（P2）**：拉 `latest.json` 加 3 秒超时，避免连接耗尽
+- **连接不释放（P2）**：建表用的临时连接显式 `close()`；`close()` 时关闭 DB
+
+### 变更
+- 补上文档承诺但从未实现的**设备级速率**：pick 10/小时、inbox 20/小时、report 20/天
+- 契约包新增 `RATE_LIMITED` 错误码与文案「慢一点，海面有点挤」
+- 新增 `docs/VPS-DEPLOY.md`：systemd、Caddy、环境变量、备份、安全清单
+
+### 验证（本地真实启动 Node 运行时）
+- 互投全流程：扔 → 捡 → 回 → 收，全部通过
+- 安全用例：未捡到不能回、未见过不能举报、改时区不多拿额度、伪造 IP 头无效
+- 并发：10 并发捡同一瓶不超卖、并发回信只成功一个、无 500
+- 持久化：重启后数据仍在
+- `npm test` → **237 通过**；`npm run check:server` 类型检查通过
+
 ## [0.9.2] — 下载页上 Cloudflare Pages（未发布）
 
 > 0.9.1 把安装包发到了 R2，但**产品页没有地方被服务**。本版补上站点托管：
