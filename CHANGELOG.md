@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.9.7] — README 重写 + 调试后门从正式版移除（未发布）
+
+### 变更：README 重写
+- 原文还停在 S3 / 0.1.0 / GitHub Pages，与实际严重脱节
+- 重写为：能做什么（8 项能力）、快速开始、**本地测试指南**、手动验证清单、仓库结构、隐私
+- 所有调试命令都在本机实测通过后才写进文档
+
+### 修复：正式版包含调试后门
+- `window.debugSpeak` / `debugSleep` 原本**进入了正式安装包**（任何人可打开 DevTools 使用）
+- 改为**动态 import 的独立 chunk**：`__COMPANION_DEBUG__` 为 false 时整段不生成
+  - 正式构建：产物里 `debugSpeak` 0 次，pet chunk 从 55.9 KB → **32.6 KB**
+  - e2e 构建（`npm run build:e2e`）：生成 `debug-hooks-*.js`，测试可用
+- 新增 `scripts/build-e2e.mjs`：Windows 的 cmd 不支持 `VAR=1 npm run` 语法，改用 Node 设环境变量
+- 新增 `npm run test:e2e:all`：自动 `build:e2e` → 四套 e2e，避免用正式构建跑测试导致误报
+
+### 顺带修复
+- 渲染进程开启了压缩（此前 electron-vite 默认未压缩），主 chunk 体积显著下降
+- `electron.vite.config.ts` 顶层的 `define` 不被 electron-vite 支持，已移除并只放在 renderer 段
+
+### 验证
+- `npm test` → 299 通过 + core 边界 + 文档门禁
+- `npm run typecheck` → 通过
+- `npm run test:e2e:all` → smoke 17/17 · needmotion 6/6 · absence 9/9 · occasions 14/14
+- 正式构建产物扫描：`debugSpeak` 0 次、无 debug chunk
+
 ## [0.9.6] — P1.5 它记得那一天（2026-11-25）
 
 > 记忆不只记过去，还要**预支未来**。用户随口说「我下周三下午要面字节」，

@@ -38,7 +38,9 @@
     "build:site": "npm run build -w @companion/web",
     "mock:bottle": "node packages/server/scripts/mock-bottle-server.mjs",
     "dev:server": "npm run dev -w @companion/server",
-    "deploy:server": "npm run deploy -w @companion/server"
+    "deploy:server": "npm run deploy -w @companion/server",
+    "test:e2e:build": "npm run build:e2e -w @companion/desktop",
+    "test:e2e:all": "npm run build:e2e -w @companion/desktop && npm run test:e2e -w @companion/desktop && npm run test:e2e:all -w @companion/desktop"
   },
   "keywords": [
     "electron",

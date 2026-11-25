@@ -400,30 +400,39 @@ window.api.onResetBall(() => {
   })
 })
 
-// 测试用：直接触发一次「带原因」的开口（不改变生产行为）
-;(window as unknown as { debugSpeak: (kind?: string) => void }).debugSpeak = (kind?: string) => {
-  if (kind === 'need') needs = reduceNeeds(needs, { type: 'raise', now: Date.now(), kind: 'hungry' })
-  const obs: Observation =
-    kind === 'need'
-      ? { kind: 'need', need: needs.active ?? 'hungry' }
-      : kind === 'sit'
-        ? { kind: 'sitting-long', minutes: 62 }
-        : kind === 'back'
-          ? { kind: 'user-back', awayMinutes: 65 }
-          : { kind: 'idle-for', minutes: 50 }
-  // 测试入口绕过打扰预算
-  lastBubbleAt = 0
-  speakWithReason(obs)
-}
-
-// 测试用：强制进入/退出睡眠（验证「睡觉时不表达需求」）
-;(window as unknown as { debugSleep: (on?: boolean) => string }).debugSleep = (on = true) => {
-  forceSleep = on
-  petState = { ...petState, mood: on ? 'sleep' : 'neutral' }
-  ball.setAttribute('data-mood', petState.mood)
-  ballInner.setAttribute('data-mood', petState.mood)
-  paintClip()
-  return petState.mood
+// 调试入口：只在带调试开关的构建里存在（正式版没有这些后门）。
+// __COMPANION_DEBUG__ 由 electron.vite.config.ts 在**编译期**注入。
+//
+// 关键：用**动态 import**。正式构建里 `if (false)` 分支里的 import 不会被解析，
+// 整个 debug-hooks.ts 不会进入产物——不依赖 tree-shaking 是否删掉副作用语句。
+declare const __COMPANION_DEBUG__: boolean
+if (__COMPANION_DEBUG__) {
+  void import('./debug-hooks').then(({ installDebugHooks }) => {
+    installDebugHooks({
+      speak(kind) {
+        if (kind === 'need') needs = reduceNeeds(needs, { type: 'raise', now: Date.now(), kind: 'hungry' })
+        const obs: Observation =
+          kind === 'need'
+            ? { kind: 'need', need: needs.active ?? 'hungry' }
+            : kind === 'sit'
+              ? { kind: 'sitting-long', minutes: 62 }
+              : kind === 'back'
+                ? { kind: 'user-back', awayMinutes: 65 }
+                : { kind: 'idle-for', minutes: 50 }
+        // 测试入口绕过打扰预算
+        lastBubbleAt = 0
+        speakWithReason(obs)
+      },
+      sleep(on) {
+        forceSleep = on
+        petState = { ...petState, mood: on ? 'sleep' : 'neutral' }
+        ball.setAttribute('data-mood', petState.mood)
+        ballInner.setAttribute('data-mood', petState.mood)
+        paintClip()
+        return petState.mood
+      },
+    })
+  })
 }
 
 window.addEventListener('resize', () => {
