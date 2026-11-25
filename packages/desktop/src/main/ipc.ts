@@ -9,7 +9,8 @@ import * as localLLM from './services/localLLM'
 import * as onlineConfig from './services/onlineConfig'
 import { logger } from './services/logger'
 import { handleAsk, resetChat } from './chat'
-import { extractMemories, bumpInteraction, ensureDailyDiary } from './remember'
+import { extractMemories, bumpInteraction, ensureDailyDiary, ensureAbsenceDiary } from './remember'
+import * as absence from '../core/absence'
 import * as mail from './mail'
 import { createMailWindow } from './mailWindow'
 import * as weather from './weatherService'
@@ -41,7 +42,7 @@ import {
 } from './windows'
 import { PERSONAS, broadcastPersona, rebuildTrayMenu, resetBallPosition } from './tray'
 import { CH, EV } from '../shared/channels'
-import { configKeySchema, localModelSchema, memoryIdSchema, petNameSchema, rectSchema } from '../shared/ipc'
+import { configKeySchema, debugAwayMsSchema, localModelSchema, memoryIdSchema, petNameSchema, rectSchema } from '../shared/ipc'
 import type { AiConfig, Persona } from '../shared/types'
 
 type WeatherStatusPlace = { city: string; label: string; latitude: number; longitude: number }
@@ -466,6 +467,15 @@ export function registerIpc(): void {
   handle(CH.debugResetBall, () => {
     resetBallPosition('debug')
     return true
+  })
+
+  // 测试用：模拟一段缺席，把生成的日记行返回（供 e2e 断言）
+  handle(CH.debugAbsenceDiary, (_e, awayMs: unknown) => {
+    const ms = debugAwayMsSchema.parse(awayMs)
+    const now = Date.now()
+    const lines = absence.buildAbsenceLines({ input: { awayStart: now - ms, awayEnd: now } })
+    if (lines.length) ensureAbsenceDiary(lines, now)
+    return lines
   })
 
   handle(CH.openMail, () => {

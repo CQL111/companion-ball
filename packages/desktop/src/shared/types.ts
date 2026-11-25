@@ -236,6 +236,8 @@ export interface CompanionApi {
   onResetBall(handler: () => void): () => void
   /** 测试用：与托盘「重置位置」走同一条路径 */
   debugResetBall(): Promise<boolean>
+  /** 测试用：模拟一段缺席（毫秒），返回写入的日记行；仅 e2e 使用 */
+  debugAbsenceDiary(awayMs: number): Promise<string[]>
 
   // 天气氛围（S4，默认关闭）
   weatherStatus(): Promise<WeatherStatusView>

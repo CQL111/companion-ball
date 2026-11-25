@@ -89,6 +89,11 @@ export interface StoreShape {
   bottle: BottleSettings
   /** 许愿瓶本地配额计数（与设置解耦，便于每日重置） */
   bottleThrownToday: { day: string; n: number }
+  /**
+   * 最近一次「长时间离开」的起点（P1 缺席日志）。
+   * 0 = 没有待处理的缺席；回来时据此生成日记并清零。
+   */
+  awaySince: number
 }
 
 export type ConfigKey = keyof StoreShape

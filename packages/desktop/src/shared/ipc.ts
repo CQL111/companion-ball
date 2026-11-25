@@ -26,6 +26,13 @@ export const memoryIdSchema = z.string().max(80)
 
 export const legalKeySchema = z.enum(['privacy', 'terms', 'disclaimer', 'thirdparty'])
 
+/** 测试用：模拟缺席时长（毫秒），夹在 1 小时–30 天之间 */
+export const debugAwayMsSchema = z
+  .number()
+  .finite()
+  .min(3600_000)
+  .max(30 * 24 * 3600_000)
+
 export const configKeySchema = z.enum([
   'position', 'autoStart', 'aiConfig', 'localModel', 'installId',
   'persona', 'agentChat', 'consentVersion', 'animations', 'pet', 'sound', 'sitReminder', 'weather', 'memories', 'notebook', 'memoryEnabled',

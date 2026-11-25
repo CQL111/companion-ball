@@ -98,11 +98,14 @@ export function ensureDailyDiary(now = Date.now()): void {
 
     // 内容没变就不重写（避免每分钟都落盘）
     const existing = getNotebook().entries.find((e) => e.date === dateKey(now))
+    // 缺席日记由 upsertDiary(source='template') 自动并入，这里只比较模板部分
     const unchanged =
-      !!existing && existing.lines.length === lines.length && existing.lines.every((l, i) => l === lines[i])
-    if (unchanged && pet.lastDiaryDate === today) return
+      !!existing &&
+      existing.lines.slice(-lines.length).every((l, i) => l === lines[i]) &&
+      pet.lastDiaryDate === today
+    if (unchanged) return
 
-    const next = notebook.upsertDiary(getNotebook(), now, lines)
+    const next = notebook.upsertDiary(getNotebook(), now, lines, 'template')
     setNotebook(next)
     store.set('pet', { ...pet, lastDiaryDate: today })
     logger.info('notebook.diary', `wrote ${lines.length} lines (${dateKey(now)})`)
@@ -111,8 +114,39 @@ export function ensureDailyDiary(now = Date.now()): void {
   }
 }
 
-/** 交互计数：由团子猫窗口的状态变化驱动，跨天自动归零 */
-export function bumpInteraction(now = Date.now()): void {
+/**
+ * P1：把一段缺席写进当天日记。
+ *
+ * 与 ensureDailyDiary 的区别：
+ *   - ensureDailyDiary 生成「今天整体」的日记（会被重算、覆盖）
+ *   - 这里是**追加一段素材**，不能覆盖已有的日记行
+ *
+ * 拼接规则：先写「你回来了」这类缺席开头，再接当天已有的日记内容，最多 4 行
+ * （猫的日记 2–4 句的规矩）。如果今天已经有同样的缺席内容，就不重复写。
+ */
+export function ensureAbsenceDiary(absenceLines: string[], now = Date.now()): void {
+  try {
+    const date = dateKey(now)
+    const existing = getNotebook().entries.find((e) => e.date === date)
+
+    // 同一段缺席不要重复写（重启后可能再次触发回来事件）
+    if (existing && existing.lines.some((l) => absenceLines.includes(l))) return
+
+    // 缺席开头优先，后面接当天已有的日记；超长则截断
+    const merged = [...absenceLines, ...(existing?.lines ?? [])].slice(0, 4)
+    const next = notebook.upsertDiary(getNotebook(), now, merged, 'absence')
+    setNotebook(next)
+
+    // 今天已经写过日记了，标记一下，避免 ensureDailyDiary 再把它整段覆盖掉
+    const pet = store.get('pet') || emptyPet()
+    store.set('pet', { ...pet, lastDiaryDate: new Date(now).toDateString() })
+    logger.info('notebook.absence', `merged ${absenceLines.length} absence lines into ${date}`)
+  } catch (e) {
+    logger.warn('notebook.absence', `merge failed: ${(e as Error).message}`)
+  }
+}
+
+/** 交互计数：由团子猫窗口的状态变化驱动，跨天自动归零 */export function bumpInteraction(now = Date.now()): void {
   const pet = store.get('pet') || emptyPet()
   const day = dateKey(now)
   const sameDay = pet.lastInteractDay === day

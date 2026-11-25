@@ -117,3 +117,40 @@ describe('persona', () => {
     expect(composeSystemPrompt('团子', [{ text: '用户住在杭州' }])).toContain('你叫团子')
   })
 })
+
+describe('缺席日记不会被模板覆盖（P1）', () => {
+  const now = new Date(2026, 10, 25, 9, 0, 0).getTime()
+  const absenceLines = ['早上好。我等你等了一整夜。', '你走后我一直趴着，没怎么动。']
+
+  it('写成 source=absence 的条目', () => {
+    const nb = upsertDiary(EMPTY_NOTEBOOK, now, absenceLines, 'absence')
+    expect(nb.entries[0]?.source).toBe('absence')
+    expect(nb.entries[0]?.lines).toEqual(absenceLines)
+  })
+
+  it('之后的模板日记不能把它整段覆盖，而是接在后面', () => {
+    let nb = upsertDiary(EMPTY_NOTEBOOK, now, absenceLines, 'absence')
+    nb = upsertDiary(nb, now, ['今天你说了不少话。', '就这样待着，也挺好。'], 'template')
+    const entry = nb.entries[0]!
+    // 缺席内容仍在开头
+    expect(entry.lines.slice(0, 2)).toEqual(absenceLines)
+    // 模板内容接在后面
+    expect(entry.lines).toContain('今天你说了不少话。')
+    // 总数不超过 4 句
+    expect(entry.lines.length).toBeLessThanOrEqual(4)
+    // 来源仍是缺席（真实事件优先）
+    expect(entry.source).toBe('absence')
+  })
+
+  it('没有缺席的那天，模板日记照常覆盖', () => {
+    let nb = upsertDiary(EMPTY_NOTEBOOK, now, ['早上很安静。'], 'template')
+    nb = upsertDiary(nb, now, ['今天你说了不少话。'], 'template')
+    expect(nb.entries[0]?.lines).toEqual(['今天你说了不少话。'])
+    expect(nb.entries[0]?.source).toBe('template')
+  })
+
+  it('缺省来源仍是 template（向后兼容）', () => {
+    const nb = upsertDiary(EMPTY_NOTEBOOK, now, ['今天很安静。'])
+    expect(nb.entries[0]?.source).toBe('template')
+  })
+})

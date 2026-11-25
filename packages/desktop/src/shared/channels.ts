@@ -56,6 +56,8 @@ export const CH = {
   weatherSet: 'weather-set',
   // 测试用：与托盘「重置位置」同一条路径（仅 e2e 使用）
   debugResetBall: 'debug-reset-ball',
+  // 测试用：模拟一段缺席，验证 P1 缺席日记（仅 e2e 使用）
+  debugAbsenceDiary: 'debug-absence-diary',
   logInfo: 'log-info',
   logWarn: 'log-warn',
   logError: 'log-error',

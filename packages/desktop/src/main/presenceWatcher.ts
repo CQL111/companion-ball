@@ -3,6 +3,7 @@
 // 不读窗口标题、不截屏、不做键盘记录。
 
 import { powerMonitor } from 'electron'
+import * as absence from '../core/absence'
 import {
   dayKey,
   initSit,
@@ -79,6 +80,8 @@ function markAway(): void {
   state.active = false
   state.awaySince = now
   state.sit = reduceSit(state.sit, { type: 'away', now })
+  // P1：记下离开起点。只有 8 小时以上才会被日记采用（判断在 core/absence.ts）。
+  store.set('awaySince', now)
   send('presence-away', { since: now })
 }
 
@@ -91,6 +94,35 @@ function markBack(): void {
   state.sit = { ...state.sit, since: now, lastRemindAt: 0 }
   logger.info('presence.watcher', `back after ${Math.round(awayMs / 60000)}min`)
   send('presence-back', { awayMs })
+
+  // P1：长时间离开 → 写进当天日记（纯本地模板，零 token）
+  const awayStart = store.get('awaySince') ?? 0
+  if (awayStart) {
+    if (absence.shouldRecordAbsence(now - awayStart)) void recordAbsenceDiary(awayStart, now)
+    store.set('awaySince', 0)
+  }
+}
+
+/** 把一段缺席写进当天日记。失败只记 warn，不影响任何用户可见流程。 */
+async function recordAbsenceDiary(awayStart: number, awayEnd: number): Promise<void> {
+  try {
+    const { currentWeatherSnapshot } = await import('./weatherService')
+    const snap = currentWeatherSnapshot()
+    const kind = snap?.kind
+    const weather = kind === 'rain' || kind === 'snow' || kind === 'storm' || kind === 'fog' ? kind : 'none'
+
+    const lines = absence.buildAbsenceLines({ input: { awayStart, awayEnd, weather } })
+    if (!lines.length) return
+
+    const { ensureAbsenceDiary } = await import('./remember')
+    ensureAbsenceDiary(lines, awayEnd)
+    logger.info(
+      'notebook.absence',
+      `wrote ${lines.length} lines after ${Math.round((awayEnd - awayStart) / 3600000)}h`,
+    )
+  } catch (e) {
+    logger.warn('notebook.absence', `failed: ${(e as Error).message}`)
+  }
 }
 
 function tick(): void {

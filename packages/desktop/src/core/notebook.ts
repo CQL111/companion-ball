@@ -17,8 +17,12 @@ export interface DiaryEntry {
   createdAt: string // UTC ISO
   /** 空的句子数组表示「今天没话说」 */
   lines: string[]
-  /** 素材来源，便于将来调试与「为什么写这句」 */
-  source: 'template'
+  /**
+   * 素材来源，便于调试与「为什么写这句」：
+   *   template = 按当天交互拼的通用日记（会被重算覆盖）
+   *   absence  = 长时间离开后回来写的（真实事件，不能被覆盖）
+   */
+  source: 'template' | 'absence'
 }
 
 export interface Notebook {
@@ -94,13 +98,28 @@ export function buildDiaryLines({ now, userTurns, interactions, memories, talked
 /**
  * 写入今天的日记。同一天重复调用会覆盖（日记每天最多一条）。
  * 返回新 Notebook，不修改入参。
+ *
+ * 例外：如果当天已有 source='absence' 的条目，普通模板日记**不覆盖它**——
+ * 缺席是真实发生的事件，不是可以重算的统计。
  */
-export function upsertDiary(notebook: Notebook, now: number, lines: string[]): Notebook {
+export function upsertDiary(notebook: Notebook, now: number, lines: string[], source: 'template' | 'absence' = 'template'): Notebook {
   const date = dateKey(now)
   const createdAt = new Date(now).toISOString()
+  const prev = notebook.entries.find((e) => e.date === date)
+
+  // 模板日记不能覆盖缺席日记（但缺席可以补充/覆盖模板）
+  if (source === 'template' && prev?.source === 'absence' && lines.length) {
+    // 保留缺席那几句，把模板内容接在后面（总长 ≤4）
+    const merged = [...prev.lines, ...lines].slice(0, 4)
+    const entries = notebook.entries.filter((e) => e.date !== date)
+    entries.push({ date, createdAt, lines: merged, source: 'absence' })
+    entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    return { version: 1, entries: entries.slice(0, MAX_ENTRIES) }
+  }
+
   const entries = notebook.entries.filter((e) => e.date !== date)
   // 空白日记不落盘：没有话说就不留痕（避免制造「今天没记录」的压力）
-  if (lines.length) entries.push({ date, createdAt, lines, source: 'template' })
+  if (lines.length) entries.push({ date, createdAt, lines, source })
   entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
   return { version: 1, entries: entries.slice(0, MAX_ENTRIES) }
 }
