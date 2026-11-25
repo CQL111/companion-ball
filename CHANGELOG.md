@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.9.1] — 单仓库 monorepo：瓶子规则收敛为唯一契约源（未发布）
+
+> 起因：`src/core/mailbox.ts` 与 `server/src/rules.ts` 是两份手抄副本，
+> 靠 `tests/rules-parity.test.ts` 比对防漂移；`DAILY_BOTTLE_LIMIT` 甚至在客户端写死、
+> 服务端走 `wrangler.toml` 字符串——改一处忘一处，两端行为就会打架。
+> 本版不加功能，只把「仓库怎么摆」和「规则放哪」这两件底层的事定下来。
+
+### 变更：仓库结构（monorepo）
+- 仓库根改为纯编排层：`private: true` + npm workspaces（Node 22 内置，无新工具）
+- `src/` → `packages/desktop/src/`；桌面端的测试、脚本、资源、构建配置一并迁入
+- `server/` → `packages/server/`（`git mv` 保留历史）
+- 新增 `packages/contracts/`、`packages/web/`（产品页与 `build-site`）
+- 根目录只保留跨包脚本：`check-core-boundary` / `release` / `publish-github`
+
+### 变更：规则收敛
+- 新增 `packages/contracts`：常量 / DTO / 错误码 / 分池 / 生命周期 / 校验 / 代号 / 错误文案
+- `src/core/mailbox.ts` 改为 `export * from '@contracts'` 兼容层（只在包里保留 `BottleSettings`）
+- `server/src/rules.ts` **删除**；服务端改为 `import … from '@companion/contracts'`
+- 加密工具拆到 `packages/server/src/crypto.ts`（契约包保持零依赖）
+- `tests/rules-parity.test.ts` → `tests/contracts.test.ts`：从「比对两份」改为「守护唯一源」
+
+### 变更：构建链适配
+- `electron.vite.config.ts` / `vitest.config.ts` / 两个 tsconfig 增加 `@contracts` 别名
+- `check-core-boundary.js` 允许 core 引用 contracts，并同时守护契约包零依赖
+- `build-legal.js` 从仓库根读 `docs/legal/`，写入 `packages/desktop/src/legal-data.js`
+- `build-bundled-key.js` / `onlineConfig.ts` 从仓库根读 `.env`
+- `smoke.mjs` 的 Electron 可执行文件与 `.env` 指向仓库根
+- `release.js` 版本号与产物改以 `packages/desktop` 为准
+- `build-site.js` 改名 `.cjs`（`packages/web` 为 ESM 包）
+
+### 文档
+- 新增 `docs/PRODUCT-THESIS.md`（产品论点）、`docs/OCCASIONS.md`（事件记忆规格）、
+  `docs/PLATFORM.md`（平台架构）、`docs/PLATFORM-S0.md`（执行清单）、`docs/REPO-LAYOUT.md`（仓库设计图）
+- `docs/ROADMAP.md` 重排：新增第四根支柱「期待」，私人闭环先于社交公开化，每阶段设闸门
+- `docs/ARCHITECTURE.md` / `SERVER.md` / `TESTING-BOTTLE.md` / `README.md` 路径同步
+
+### 修复
+- `build/entitlements.mac.plist`（macOS 签名配置）在迁移中被 `.gitignore` 误吞，已从历史恢复
+
+### 验证
+- `npm test` → **231 通过**（16 个测试文件）+ core 边界与契约零依赖检查通过
+- `npm run typecheck` → 桌面端两套 + 契约；`npm run check:server` → 通过
+- `npm run build` + `npm run test:e2e` → **17/17 通过**（含真实 AI 对话）
+- `npm run mock:bottle` / `npm run build:site` / `npm run build:legal` 均正常
+
 ## [0.9.0] — 可信的主动：每句话都有原因 + 它需要你（2026-11-23）
 
 > 起因：「他说的每句话都是固定的，我对他无感。」

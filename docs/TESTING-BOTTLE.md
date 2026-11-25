@@ -62,7 +62,7 @@ npx electron . --user-data-dir="$(mktemp -d)"
 
 ## 四、和真实服务端的差异
 
-| 项 | mock（`scripts/mock-bottle-server.mjs`） | 真实（`server/`） |
+| 项 | mock（`scripts/mock-bottle-server.mjs`） | 真实（`packages/server/`） |
 |---|---|---|
 | 存储 | 内存，重启清空 | D1 |
 | 内容策略 | 固定 `open` | 可配置（国内 `filtered` / 海外 `open`） |
@@ -77,8 +77,8 @@ npx electron . --user-data-dir="$(mktemp -d)"
 如果要在接近真实的环境里验证（包括 D1 的 SQL）：
 
 ```bash
-cd server
-npm install
+cd packages/server
+npm install -w @companion/server
 npx wrangler d1 execute companion-bottles-test --local --file=./schema.sql
 npx wrangler dev --local --port 8788
 ```

@@ -6,7 +6,8 @@
 
 ## 一、这是什么
 
-**桌面陪伴 · 团子猫** —— Windows 桌面 Electron 陪伴角色，当前 S2.5（有情绪、有记忆，还会在桌面上走动）。
+**桌面陪伴 · 团子猫** —— Windows 桌面 Electron 陪伴角色，当前 0.9.0（P0 已完成，
+下一步 P0.5「不说话的身体」；产品方向以 [`docs/PRODUCT-THESIS.md`](docs/PRODUCT-THESIS.md) 为准）。
 
 - 80×80 内联 SVG 团子猫常驻桌角：可拖拽、位置记忆、贴边自动翻转菜单
 - 7 种情绪（醒着 / 开心 / 好奇 / 打盹 / 睡着 / 不耐烦 / 眩晕）+ 98 条台词 + 3 秒自动消失的气泡
@@ -24,7 +25,8 @@
    流程与门禁见 [`docs/RELEASING.md`](docs/RELEASING.md)；`npm run release:*` 会自动检查。
    缺任何一项，这次提交不算完成。
 2. **不引入任何运势 / 黄历 / 卡片 / 精灵代码**（属于 fortune-ball）。
-3. **不建 monorepo**；壳层只在本仓库维护，不复用 fortune-ball 的代码包。
+3. **单仓库 monorepo（私有）**：桌面端在根目录，平台包在 `packages/{contracts,server,web,admin}`；
+   不建**跨产品** monorepo；壳层只在本仓库维护，不复用 fortune-ball 的代码包。
 4. **`src/core/` 零平台依赖**：不得 import `electron` / `node:fs` / `node:path` / `node:os` 等，
    不得用 `window` / `document` / `process.platform`；`npm run check:core` 会拦（含 TS）。
    core 也不得 import core 之外的模块；共享类型从 `core/types.ts` 出，`shared/types.ts` 向上扩展。
@@ -96,6 +98,8 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 
 | 你要改… | 去 |
 |---|---|
+| 许愿瓶规则（常量 / 校验 / 分池 / 生命周期） | `packages/contracts/src/`（**唯一源**；`src/core/mailbox.ts` 只做 re-export） |
+| 许愿瓶服务端 API | `packages/server/src/index.ts`（部署：`npm run -w @companion/server deploy`） |
 | 角色表现、拖拽、菜单、热区 | `src/renderer/pet/pet.ts` + `styles/ball.css` + `pet/index.html` |
 | 动作契约 / 两视角 / 换肤 | `src/core/motion.ts` + `src/renderer/pet/renderer.ts` |
 | 皮肤素材（图集 + manifest） | `src/renderer/pet/skins/`（`npm run build:skin` 生成） |
@@ -126,7 +130,7 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 - ✅ **S2「它记得你 / 笔记本上桌」（0.4.0）**：人格卡 + 长期记忆（≤30 条，可逐条删/全部忘记/开关）+ 每日日记 + 全量备份导出/导入
 - ✅ **S2.5「它会在桌面上生活」（0.5.0）**：自主走动 + 爬屏幕边缘 + 天花板倒挂 + 拖甩物理 + 轻音效
 - ✅ **S2.6「皮肤与动作架构」（0.6.0）**：动作契约 + 图集渲染 + 换肤不改代码
-- ⏳ **S3「许愿瓶（联网 MVP）」进行中（0.7.0 已发）**：客户端与 `server/` 代码就绪、
+- ⏳ **S3「许愿瓶（联网 MVP）」进行中（0.7.0 已发）**：客户端与 `packages/server/` 代码就绪、
   本地 mock 跑通全流程；**待部署** Cloudflare 与填写默认地址后才算完成
 - ✅ 0.7.0 附带：分区触摸（摸头 / 戳身 / 挠脚）+ 注视鼠标 + 隐私政策更新
 - ✅ **S4「它看见你」（0.8.0）**：`core/presence` 离开 / 回来 / 久坐提醒 + `core/weather` 天气氛围
@@ -135,7 +139,16 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 - ✅ 0.8.2 稳定补丁：重置位置不再丢猫（走 `reset-ball` 事件而非移窗口）+ 托盘图标修复
 - ✅ **P0「可信的主动 + 它需要你」（0.9.0）**：`core/speech` 观察 → 台词（每句话都有原因）+
   `core/needs` 需求系统（可拒绝、不惩罚、每日 ≤2、0–6 点安静）；227 单测
-- 下一步：**P1「猫带回来的东西」**（RSS + 记忆匹配，每天 ≤1 条、不弹通知）见 ROADMAP
+- ✅ **产品论点与路线重排（2026-11-25）**：新增 [`docs/PRODUCT-THESIS.md`](docs/PRODUCT-THESIS.md)
+  与 [`docs/OCCASIONS.md`](docs/OCCASIONS.md)；私人闭环（P1 缺席日志 → P1.5 事件记忆 →
+  P2 页边一句）先于社交公开化，每个阶段都有闸门
+- ✅ **平台架构（2026-11-25）**：新增 [`docs/PLATFORM.md`](docs/PLATFORM.md)；单仓库私有 monorepo，
+  `packages/{contracts,server,web,admin}`；网页只读橱窗、新闻官方编辑、后台 API Key + TOTP
+- ✅ **平台 S0 完成（2026-11-25）**：workspaces + `packages/contracts` 唯一契约源（`mailbox.ts` 改为
+  re-export，`server/src/rules.ts` 副本删除）+ `server/` 迁入 `packages/server`；231 单测 / 17 e2e
+- **下一步：部署 S3（0.9.1）**——在 `packages/server` 建 D1 + 填默认地址 + 邀请制冷启动
+- 产品侧下一步：P0.5「不说话的身体」——`core/needs` 需求态 → `core/motion` 动作映射（不新增台词）
+- 之后：P1 缺席日志（`core/absence.ts`）→ P1.5 事件记忆（`core/occasions.ts`，规格见 OCCASIONS.md）
 - 技术债清单与技术交付清单见 `docs/ARCHITECTURE.md` 第十二节
 
 ## 八、文档地图
@@ -143,7 +156,12 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 | 文档 | 用途 | 读者 |
 |---|---|---|
 | `AGENTS.md`（本文） | 交接速查、宪法、坑位 | AI 协作者 |
-| `docs/ROADMAP.md` | 定位、S1–S7 里程碑、验收、商业化 | 产品 |
+| `docs/ROADMAP.md` | 定位、S1–S8 里程碑、闸门、验收、商业化 | 产品 |
+| `docs/PRODUCT-THESIS.md` | 产品论点：镜鉴、第四根支柱、语言资产、机制、投资逻辑 | 产品 / 投资人 |
+| `docs/OCCASIONS.md` | P1.5 事件记忆规格：数据模型、抽取、隐式确认、接住节奏、验收 | 工程 |
+| `docs/PLATFORM.md` | 平台架构：网页橱窗 / 新闻管道 / 管理后台 / monorepo / 资源评估 | 产品 / 工程 |
+| `docs/PLATFORM-S0.md` | 平台 S0 执行清单：workspaces、契约收敛、server 迁入、守卫适配、发布渠道、CI | 工程 |
+| `docs/REPO-LAYOUT.md` | 仓库设计图：目录结构、依赖方向、守卫、命令 | 工程 |
 | `docs/ARCHITECTURE.md` | 技术栈、分层、进程、数据流、IPC、存储、安全、构建、手机端 | 工程 |
 | `docs/RELEASING.md` | 变更纪律：文档 + 功能测试 + tag + Release | 所有 |
 | `docs/SERVER.md` / `docs/TESTING-BOTTLE.md` | 许愿瓶服务端设计与本地测试 | 工程 |

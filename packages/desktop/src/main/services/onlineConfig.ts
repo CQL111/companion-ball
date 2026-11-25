@@ -35,8 +35,14 @@ function parseEnv(text: string): Record<string, string> {
 }
 
 function appRoot(): string {
-  // dev: out/main/index.js → 仓库根；packaged: resources/app.asar → 同上两级结构
+  // dev: packages/desktop/out/main/index.js → packages/desktop
+  // packaged: resources/app.asar → 同上两级结构
   return path.join(__dirname, '..', '..')
+}
+
+/** 仓库根（monorepo 根）：.env 在这里；打包后不存在，调用方会跳过 */
+function repoRoot(): string {
+  return path.join(appRoot(), '..', '..')
 }
 
 // 构建时内置的 Key：打包后位于 resources/bundled-ai.json（见 electron-builder.key.yml）
@@ -64,7 +70,11 @@ export function loadBundled(): BundledAi | null {
 }
 
 function loadLocalEnv(): Record<string, string> {
-  const files = [path.join(appRoot(), '.env'), path.join(process.cwd(), '.env')]
+  const files = [
+    path.join(repoRoot(), '.env'),
+    path.join(appRoot(), '.env'),
+    path.join(process.cwd(), '.env'),
+  ]
   if (process.resourcesPath) files.push(path.join(process.resourcesPath, '.env'))
   for (const f of files) {
     try {

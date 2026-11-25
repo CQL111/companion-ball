@@ -2,6 +2,9 @@
 // 设计：docs/SERVER.md ｜ 风险：同文档第一节
 // 所有接口 POST + JSON，带 X-Device-Token（服务端只存哈希）。
 //
+// 规则常量与校验来自 @companion/contracts（与桌面端同一份，不再手抄）。
+// 加密工具在 ./crypto（服务端专用，不进契约包）。
+//
 // 三道闸（当前审核能力的全部）：
 //   1. 限流：单设备每日投递/回信上限 + 单 IP 每分钟上限
 //   2. 举报即隐藏：hidden = 1，所有人不可见（保留数据供复核）
@@ -11,11 +14,10 @@ import {
   BOTTLE_MAX_LENGTH,
   REPLY_MAX_LENGTH,
   checkText,
-  hashToken,
   poolFor,
   randomAlias,
-  randomId,
-} from './rules'
+} from '@companion/contracts'
+import { hashToken, randomId } from './crypto'
 
 export interface Env {
   DB: D1Database

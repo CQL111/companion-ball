@@ -46,11 +46,11 @@ npm run typecheck         # TypeScript 全量类型检查
 ## 构建与发布
 
 ```bash
-npm run build             # typecheck + legal + electron-vite build → out/
-npm run build:public      # 公开版（不带 Key）→ out-public/
-npm run build:personal    # 内置 Key 版（读仓库根 bundled-ai.json）→ out-release-key/
-npm run release:patch     # 升版本 → tag → push → 双版本构建并发布
-npm run build:site        # product-intro.html → docs/index.html（GitHub Pages）
+npm run build             # typecheck + legal + electron-vite build → packages/desktop/out/
+npm run build:public      # 公开版（不带 Key）→ packages/desktop/out-public/
+npm run build:personal    # 内置 Key 版（读 packages/desktop/bundled-ai.json）→ packages/desktop/out-release-key/
+npm run release:patch     # 升版本（packages/desktop）→ tag → push → 构建并发布
+npm run build:site        # packages/web/product-intro.html → docs/index.html（GitHub Pages）
 ```
 
 资产命名：
@@ -58,20 +58,29 @@ npm run build:site        # product-intro.html → docs/index.html（GitHub Page
 - `companion-ball-public.Setup.X.Y.Z.exe` — 公开版
 - `companion-ball.Setup.X.Y.Z.exe` — 内置 Key 版
 
+> 2026-11-25 起为 **monorepo**：桌面端在 `packages/desktop/`，服务端在 `packages/server/`，
+> 两端共用的契约在 `packages/contracts/`，网页在 `packages/web/`。仓库根只做编排。
+
 ## 目录
 
 ```
-src/main/               Electron 主进程：窗口 / 托盘 / IPC / 位置 / 诊断（TS）
-src/preload/            IPC 白名单（contextBridge）
-src/renderer/pet/       团子猫（命令式 TS：拖拽 / 菜单 / 热区）
-src/renderer/{chat,settings,consent,legal}/   React 19 窗口
-src/core/               领域逻辑（零平台依赖，为手机端预留）
-src/shared/             跨进程契约：通道名 / zod schema / 类型
-src/data/               内容资产（台词、人格卡、模板，S1 起）
-resources/              图标与托盘图
+packages/desktop/       桌面客户端（Electron）
+  src/main/             Electron 主进程：窗口 / 托盘 / IPC / 位置 / 诊断（TS）
+  src/preload/          IPC 白名单（contextBridge）
+  src/renderer/pet/     团子猫（命令式 TS：拖拽 / 菜单 / 热区）
+  src/renderer/{chat,settings,consent,legal}/   React 19 窗口
+  src/core/             领域逻辑（零平台依赖，为手机端预留）
+  src/shared/           跨进程契约：通道名 / zod schema / 类型
+  src/data/             内容资产（台词、人格卡、模板）
+  resources/            图标与托盘图
+packages/contracts/     桌面端与服务端共用的瓶子规则（唯一源）
+packages/server/        许愿瓶 API（Cloudflare Workers + D1）
+packages/web/           产品页 / 下载页
+scripts/                跨包脚本：core 边界 / 发版 / 发布
 docs/ROADMAP.md         产品路线
+docs/PLATFORM.md        平台架构（网页 / 后台 / monorepo）
+docs/REPO-LAYOUT.md     仓库设计图
 docs/ARCHITECTURE.md    技术架构
-docs/STRIP-LOG.md       剥离记录
 docs/legal/             隐私政策 / 用户协议 / 免责声明 / 第三方许可
 ```
 

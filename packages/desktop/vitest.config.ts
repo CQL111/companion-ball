@@ -6,6 +6,7 @@ export default defineConfig({
     alias: {
       '@shared': resolve(__dirname, 'src/shared'),
       '@core': resolve(__dirname, 'src/core'),
+      '@contracts': resolve(__dirname, '../contracts/src/index.ts'),
     },
   },
   test: {

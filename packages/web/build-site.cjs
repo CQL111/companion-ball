@@ -4,8 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const root = path.resolve(__dirname, '..');
-const src = path.join(root, 'product-intro.html');
+const root = path.resolve(__dirname, '..', '..');
+const src = path.join(__dirname, 'product-intro.html');
 const outDir = path.join(root, 'docs');
 const out = path.join(outDir, 'index.html');
 

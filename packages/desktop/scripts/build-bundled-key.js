@@ -1,14 +1,17 @@
 // scripts/build-bundled-key.js
-// 把本地 .env 里的线上模型配置打包进应用（构建时内置 Key）。
-// 生成仓库根的 bundled-ai.json（已被 gitignore），打包时由 electron-builder.key.yml 复制到 resources/。
+// 把仓库根 .env 里的线上模型配置打包进应用（构建时内置 Key）。
+// 生成 packages/desktop/bundled-ai.json（已被 gitignore），打包时由 electron-builder.key.yml 复制到 resources/。
 // 用法：
 //   npm run build:key        # 生成 + 构建安装包（内置 Key）
 //   node scripts/build-bundled-key.js --check   # 只检查 .env 是否可用
 const fs = require('fs');
 const path = require('path');
 
+/** 本包根目录（packages/desktop） */
 const ROOT = path.join(__dirname, '..');
-const ENV = path.join(ROOT, '.env');
+/** 仓库根目录（.env 在根目录，由开发者本地维护） */
+const REPO_ROOT = path.join(ROOT, '..', '..');
+const ENV = path.join(REPO_ROOT, '.env');
 const OUT_DIR = ROOT;
 const OUT = path.join(OUT_DIR, 'bundled-ai.json');
 

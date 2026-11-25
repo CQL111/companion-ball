@@ -15,8 +15,12 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+// packages/desktop（应用根：main 指向 ./out/main/index.js）
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
-const ELECTRON = path.join(ROOT, 'node_modules', 'electron', 'dist', 'electron.exe')
+// 仓库根（workspace 依赖提升到根 node_modules；.env 也在根）
+const REPO_ROOT = path.resolve(ROOT, '..', '..')
+const ELECTRON = path.join(REPO_ROOT, 'node_modules', 'electron', 'dist', 'electron.exe')
+const ENV_FILE = path.join(REPO_ROOT, '.env')
 const PORT = 9333
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'cb-e2e-'))
 
@@ -204,7 +208,7 @@ try {
   }
 
   if (chat) {
-    const hasKey = !!(process.env.DEEPSEEK_API_KEY || fs.existsSync(path.join(ROOT, '.env')))
+    const hasKey = !!(process.env.DEEPSEEK_API_KEY || fs.existsSync(ENV_FILE))
     if (hasKey) {
       console.log('\n[e2e] 发送真实消息（使用本机 .env 的 Key）')
       await evalIn(

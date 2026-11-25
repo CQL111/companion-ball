@@ -1,0 +1,9 @@
+{
+  "name": "@companion/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:site": "node build-site.cjs"
+  }
+}

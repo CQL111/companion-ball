@@ -9,7 +9,7 @@
 这四条决定后续每一个技术选择，改动前先确认没有破坏它们：
 
 1. **薄壳厚领域**：平台能力（窗口、托盘、IPC、文件、网络）留在 Electron 壳里；
-   角色逻辑（状态机、记忆、笔记本、瓶子规则、对话循环）放在**零平台依赖**的 `src/core/`。
+   角色逻辑（状态机、记忆、笔记本、瓶子规则、对话循环）放在**零平台依赖**的 `packages/desktop/src/core/`。
    这是手机端复用与纯 node 单测的前提。
 2. **失败静默降级**：AI、后端、天气任何一项挂了，角色本身必须照常可用。
    错误降级为浮窗提示或日志，不允许打断角色体验。
@@ -21,12 +21,12 @@
 
 | 约束 | 位置 | 守护 |
 |---|---|---|
-| `.ball` 的 transform 只由 `setBallTransform` 写 | `src/renderer/pet/pet.ts` | 评审 |
-| 动画只能动 `.ball-inner` / SVG 分组 | `src/renderer/styles/ball.css` | 评审 |
+| `.ball` 的 transform 只由 `setBallTransform` 写 | `packages/desktop/src/renderer/pet/pet.ts` | 评审 |
+| 动画只能动 `.ball-inner` / SVG 分组 | `packages/desktop/src/renderer/styles/ball.css` | 评审 |
 | 装饰层一律 `pointer-events: none` | 各窗口 CSS | 评审 |
-| 高频通道 `update-ball-pos` 不写日志、400ms 合并落盘 | `src/main/ipc.ts` | 评审 |
-| 球位置传给 Electron 前必须 `Math.round` | `src/main/windows.ts` | `getBallScreenPos` 已处理 |
-| `src/core/` 不得依赖 electron / node 内置 / window / document / process.platform | — | `npm run check:core` |
+| 高频通道 `update-ball-pos` 不写日志、400ms 合并落盘 | `packages/desktop/src/main/ipc.ts` | 评审 |
+| 球位置传给 Electron 前必须 `Math.round` | `packages/desktop/src/main/windows.ts` | `getBallScreenPos` 已处理 |
+| `packages/desktop/src/core/` 不得依赖 electron / node 内置 / window / document / process.platform | — | `npm run check:core` |
 | 不引入 fortune-ball 的运势/黄历/卡片/精灵代码 | — | `CLAUDE.md` |
 
 ## 二、技术栈
@@ -34,7 +34,7 @@
 | 层 | 选型 | 理由 |
 |---|---|---|
 | 构建 | **electron-vite 4** + Vite 7 | Electron 社区标准脚手架；main/preload/renderer 三段配置，HMR |
-| 语言 | **TypeScript 5.9**（strict） | `src/core` 要跨端复用，领域模型必须有稳定契约 |
+| 语言 | **TypeScript 5.9**（strict） | `packages/desktop/src/core` 要跨端复用，领域模型必须有稳定契约 |
 | UI | **React 19**（聊天 / 设置 / 协议 / 法律） | 状态驱动的列表界面；社区与 AI 生态默认值 |
 | 宠物窗口 | **命令式 TS**（不引入 React） | 60fps transform、点击穿透、hit-region 是精密手工活，框架渲染循环只会增加回归风险 |
 | 校验 | **zod 4** | IPC 入参与 store 写入的运行时校验，仅主进程使用 |
@@ -64,7 +64,7 @@
 │   services/          ai · localLLM · onlineConfig · logger      │
 │                      watcher · detector · selfCheck             │
 └──────────────────────────────┬───────────────────────────────┘
-                               │ IPC（src/shared/channels.ts 定义通道名）
+                               │ IPC（packages/desktop/src/shared/channels.ts 定义通道名）
 ┌──────────────────────────────▼───────────────────────────────┐
 │ src/preload/index.ts   白名单 contextBridge（不暴露 ipcRenderer）│
 └──────────────────────────────┬───────────────────────────────┘
@@ -123,7 +123,7 @@ core     ──→ 只能引用 core 内部
 
 ### 内容资产
 
-台词库、人格卡、日记模板、信纸定义等**内容**放 `src/data/`（S1 起），不内嵌进组件。
+台词库、人格卡、日记模板、信纸定义等**内容**放 `packages/desktop/src/data/`（S1 起），不内嵌进组件。
 手机端直接复用，不需要重写。
 
 ## 四、进程与窗口模型
@@ -280,16 +280,16 @@ selfCheck：启动 5s 后检查 AI 配置 / tray / 快捷键，环境项只 warn
 
 ## 六、IPC 契约
 
-**唯一通道**：`preload` 暴露的 `window.api`（类型见 `src/shared/types.ts` 的 `CompanionApi`）。
-通道名常量在 `src/shared/channels.ts`，入参 schema 在 `src/shared/ipc.ts`。
+**唯一通道**：`preload` 暴露的 `window.api`（类型见 `packages/desktop/src/shared/types.ts` 的 `CompanionApi`）。
+通道名常量在 `packages/desktop/src/shared/channels.ts`，入参 schema 在 `packages/desktop/src/shared/ipc.ts`。
 
 ### 新增一个能力的固定步骤
 
-1. `src/shared/channels.ts` 加通道名；如需事件，`EV` 里加事件名。
-2. `src/shared/ipc.ts` 加入参 schema（如果参数简单可复用现有）。
-3. `src/main/ipc.ts` 里 `handle(CH.xxx, ...)` 注册（自动带入口日志与异常兜底）。
-4. `src/shared/types.ts` 的 `CompanionApi` 加方法签名。
-5. `src/preload/index.ts` 白名单加一行（**必须与第 4 步一致**，TS 会校验）。
+1. `packages/desktop/src/shared/channels.ts` 加通道名；如需事件，`EV` 里加事件名。
+2. `packages/desktop/src/shared/ipc.ts` 加入参 schema（如果参数简单可复用现有）。
+3. `packages/desktop/src/main/ipc.ts` 里 `handle(CH.xxx, ...)` 注册（自动带入口日志与异常兜底）。
+4. `packages/desktop/src/shared/types.ts` 的 `CompanionApi` 加方法签名。
+5. `packages/desktop/src/preload/index.ts` 白名单加一行（**必须与第 4 步一致**，TS 会校验）。
 
 高频通道用 `handleFast()`（不写日志，只做最小校验）。
 
@@ -374,16 +374,18 @@ AGENT_MAX_STEPS`。同类错误 5 分钟内只记一次 error（`ai.ts` 去重�
 
 ## 十、构建与发布
 
+> 2026-11-25 monorepo：桌面端构建配置在 `packages/desktop/`，产物目录相对于该包；
+> 根目录命令是转发（`npm run build` → `npm run build -w @companion/desktop`）。
+
 ```
-npm run dev              # electron-vite dev（HMR）
-npm run build            # typecheck + build:legal + electron-vite build → out/
+npm run build            # typecheck + build:legal + electron-vite build → packages/desktop/out/
 npm run build:local      # build + electron-builder --dir/win
-npm run build:public     # 公开版（无内置 Key）→ out-public/
-npm run build:personal   # 内置 Key 版 → out-release-key/
-npm run release:patch    # 升版本 → tag → push → electron-vite build → 双版本发布
+npm run build:public     # 公开版（无内置 Key）→ packages/desktop/out-public/
+npm run build:personal   # 内置 Key 版 → packages/desktop/out-release-key/
+npm run release:patch    # 升版本（packages/desktop）→ tag → push → 构建 → 发布
 ```
 
-| 配置 | 产物目录 | 用途 |
+| 配置 | 产物目录（相对 `packages/desktop/`） | 用途 |
 |---|---|---|
 | `electron-builder.yml` | `out-release/` | 默认 / 本地 |
 | `electron-builder.public.yml` | `out-public/` | 公开版 |
@@ -392,10 +394,10 @@ npm run release:patch    # 升版本 → tag → push → electron-vite build �
 - 打包只收 `out/**/*` + `package.json`；`src / tests / docs / scripts / resources` 被排除，
   打包产物里只有编译结果。
 - `resources/`（图标、托盘图）通过 `buildResources` 与 `extraResources` 进入安装包。
-- `build:legal`：`docs/legal/*.md` → `src/legal-data.js`（生成物，勿手改；已入库，
+- `build:legal`：仓库根 `docs/legal/*.md` → `packages/desktop/src/legal-data.js`（生成物，勿手改；已入库，
   让 `npm start` 在未构建时也能用）。
-- `build:site`：`product-intro.html` → `docs/index.html`（Pages 源为 master `/docs`）。
-- `bundled-ai.json` 生成在仓库根（已 gitignore），由 `electron-builder.key.yml` 复制进安装包。
+- `build:site`：`packages/web/product-intro.html` → `docs/index.html`（Pages 源为 master `/docs`）。
+- `bundled-ai.json` 生成在 `packages/desktop/`（已 gitignore），由 `electron-builder.key.yml` 复制进安装包。
 
 ## 十一、测试
 
@@ -421,7 +423,7 @@ npx electron-vite build
 
 | # | 问题 | 影响 | 计划 |
 |---|---|---|---|
-| 1 | `main.js` 已拆分为 `src/main/*`，但 `ipc.ts` 仍约 300 行、按域集中注册 | 可维护性尚可，继续增长会变长 | 通道超过 ~40 个时按域拆 `ipc/` 目录 |
+| 1 | `main.js` 已拆分为 `packages/desktop/src/main/*`，但 `ipc.ts` 仍约 300 行、按域集中注册 | 可维护性尚可，继续增长会变长 | 通道超过 ~40 个时按域拆 `ipc/` 目录 |
 | 2 | 无 ESLint / Prettier | 风格一致性靠评审 | S1 前引入（pre-commit） |
 | 3 | ~~设置开关 `animations` 已保存但渲染端未消费~~ | — | ✅ S1 已接上：`config-changed` 广播 + `data-anim` 关闭过渡/常态动画 |
 | 4 | `legal-data.js` 是 CJS 生成物 | 依赖 Vite 的 CJS 互操作 | 可接受；生成器可改为 `.ts` 后再评估 |
@@ -452,8 +454,8 @@ tests/petState.test.ts    状态机单测
 | 数据要跨设备 | 匿名恢复码 + 端到端加密的全量数据包（S2 的导出/导入是第一步），不做云账号 |
 | Key 不能进客户端 | `callLLM` 保持唯一出口，自有代理端点在后端持有上游 Key |
 
-**内容资产**（台词、人格卡、日记模板、信纸定义）全部放 `src/data/`，不内嵌进 HTML。
-`src/core/` 在手机端立项时发布为独立 npm 包，由另一个仓库依赖（不建 monorepo）。
+**内容资产**（台词、人格卡、日记模板、信纸定义）全部放 `packages/desktop/src/data/`，不内嵌进 HTML。
+`packages/desktop/src/core/` 在手机端立项时发布为独立 npm 包，由另一个仓库依赖（不建 monorepo）。
 
 ## 十四、变更记录
 

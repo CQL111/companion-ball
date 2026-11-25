@@ -2,6 +2,17 @@
 /server/node_modules
 /server/.wrangler
 /server/wrangler.test.toml
+/packages/server/node_modules
+/packages/server/.wrangler
+/packages/server/wrangler.test.toml
+/packages/desktop/out
+/packages/desktop/out-release
+/packages/desktop/out-release-key
+/packages/desktop/out-public
+/packages/desktop/dist-public
+/packages/desktop/release
+/packages/web/dist
+/packages/admin/dist
 dist
 /release
 /out
@@ -14,6 +25,7 @@ dist
 out-public
 # 构建时生成的内置 Key（含密钥，绝不入库）
 /bundled-ai.json
+/packages/desktop/bundled-ai.json
 # 本地开发/验证产物
 .dev-data
 .out-data

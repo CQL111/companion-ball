@@ -6,6 +6,7 @@ const root = __dirname
 const alias = {
   '@shared': resolve(root, 'src/shared'),
   '@core': resolve(root, 'src/core'),
+  '@contracts': resolve(root, '../contracts/src/index.ts'),
   '@legal-data': resolve(root, 'src/legal-data.js'),
 }
 

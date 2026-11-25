@@ -16,7 +16,9 @@
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["src/shared/*"],
-      "@core/*": ["src/core/*"]
+      "@core/*": ["src/core/*"],
+      "@contracts": ["../contracts/src/index.ts"],
+      "@contracts/*": ["../contracts/src/*"]
     }
   },
   "include": [

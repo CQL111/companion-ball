@@ -11,20 +11,24 @@
 //   3. npm test（Vitest + core 边界）
 //   4. npm run typecheck
 //   5. npm run build（electron-vite 构建成功）
-//   6. node tests/e2e/smoke.mjs（真实启动应用的功能测试）
+//   6. node packages/desktop/tests/e2e/smoke.mjs（真实启动应用的功能测试）
 //
 // 之后：git tag vX.Y.Z → push → 构建并发布 **公开版** → GitHub Release
 // Release notes 取 CHANGELOG 中该版本的段落。
 //
 // ⚠️ 安全边界：内置 Key 版（electron-builder.key.yml）**永远不发布到 GitHub**。
 // 它把 .env 里的真实 Key 打进安装包，一旦公开上传，任何人都能解包取出并消耗你的额度。
-// 需要内置 Key 版时在本机执行 `npm run build:key`，产物只留在 out-release-key/。
+// 需要内置 Key 版时在本机执行 `npm run build:key`，产物只留在 packages/desktop/out-release-key/。
+//
+// 2026-11-25 monorepo：桌面端在 packages/desktop，版本号以它为准；构建产物在 packages/desktop/dist-public。
+// 根 package.json 保持独立版本号，只作仓库编排。
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
 const ROOT = path.resolve(__dirname, '..');
+const DESKTOP = path.join(ROOT, 'packages', 'desktop');
 const arg = process.argv[2];
 const validTypes = ['patch', 'minor', 'major'];
 
@@ -39,7 +43,7 @@ function fail(msg) {
   process.exit(1);
 }
 function readVersion() {
-  return JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8')).version;
+  return JSON.parse(fs.readFileSync(path.join(DESKTOP, 'package.json'), 'utf-8')).version;
 }
 
 // ---------- 1. 工作区必须干净 ----------
@@ -49,10 +53,10 @@ if (dirty) {
   fail('工作区有未提交的改动。请先提交（变更 + CHANGELOG 一起），再发版。');
 }
 
-// ---------- 2. 升版本 ----------
+// ---------- 2. 升版本（桌面端包） ----------
 if (arg && validTypes.includes(arg)) {
   console.log(`⬆️ 升级版本 (${arg})...`);
-  run(`npm version ${arg} --no-git-tag-version`, { stdio: 'ignore' });
+  run(`npm version ${arg} --no-git-tag-version`, { stdio: 'ignore', cwd: DESKTOP });
 } else if (arg) {
   fail(`未知的版本类型 "${arg}"，可用：${validTypes.join(' / ')}`);
 }
@@ -94,17 +98,17 @@ console.log('\n📦 构建...');
 run('npm run build');
 
 console.log('\n🧭 功能测试（真实启动应用）...');
-run('node tests/e2e/smoke.mjs');
+run('node packages/desktop/tests/e2e/smoke.mjs');
 
 // ---------- 7. 构建安装包（不在这里上传） ----------
 // 产物目录带版本号：Windows 上残留进程会锁住旧产物里的 app.asar，
 // 复用同一个 out-public/ 会在下次打包时报 EBUSY。
-const distDir = path.join(ROOT, 'dist-public', version);
+const distDir = path.join(DESKTOP, 'dist-public', version);
 console.log(`\n🚀 构建公开版 → ${path.relative(ROOT, distDir)}`);
-run(`electron-builder --win --publish never --config electron-builder.public.yml -c.directories.output="${distDir}"`);
+run(`electron-builder --win --publish never --config electron-builder.public.yml -c.directories.output="${distDir}"`, { cwd: DESKTOP });
 
 // 内置 Key 版只在本地构建，绝不发布到 GitHub（见文件头部的安全边界说明）
-if (fs.existsSync(path.join(ROOT, 'bundled-ai.json'))) {
+if (fs.existsSync(path.join(DESKTOP, 'bundled-ai.json'))) {
   console.log('\n🔒 检测到 bundled-ai.json：内置 Key 版不随 Release 发布');
   console.log('   需要个人版安装包时，在本机执行：npm run build:key');
 }

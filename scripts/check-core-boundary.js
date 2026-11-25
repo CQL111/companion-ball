@@ -1,4 +1,4 @@
-// check-core-boundary.js - 守护 src/core/ 的零平台依赖
+// check-core-boundary.js - 守护 packages/desktop/src/core/ 的零平台依赖
 // core 必须能在纯 node 下跑（单测 + 将来的手机端复用），所以禁止：
 //   - require Electron / Node 内置（fs / path / os / child_process / electron）
 //   - 浏览器全局（window / document / navigator）
@@ -10,9 +10,13 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const CORE_DIR = path.join(ROOT, 'src', 'core');
+const DESKTOP_SRC = path.join(ROOT, 'packages', 'desktop', 'src');
+const CORE_DIR = path.join(DESKTOP_SRC, 'core');
 // src/data/ 是纯 JSON 内容资产（台词、人格卡），零依赖，允许 core 只读引用
-const DATA_DIR = path.join(ROOT, 'src', 'data');
+const DATA_DIR = path.join(DESKTOP_SRC, 'data');
+// packages/contracts 是两端共用的契约（纯 TS、零平台依赖）。core 可以引用它，
+// 但不允许从 core 再跳出去引用其他包。
+const CONTRACTS_DIR = path.join(ROOT, 'packages', 'contracts', 'src');
 
 // 禁止的 require：Electron 与 Node 平台模块
 const FORBIDDEN_MODULES = [
@@ -78,9 +82,20 @@ function checkFile(file) {
       const resolved = path.resolve(path.dirname(file), mod);
       const inCore = resolved.startsWith(CORE_DIR + path.sep) || resolved === CORE_DIR;
       const inData = resolved.startsWith(DATA_DIR + path.sep) && resolved.endsWith('.json');
-      if (!inCore && !inData) {
+      const inContracts = resolved.startsWith(CONTRACTS_DIR + path.sep) || resolved === CONTRACTS_DIR;
+      if (!inCore && !inData && !inContracts) {
         const line = src.slice(0, index).split('\n').length;
         problems.push({ line, msg: `${kind} 跳出 core：${mod}` });
+      }
+      return;
+    }
+    // 别名依赖：@contracts 指向 packages/contracts，允许；其他别名不允许
+    if (mod === '@contracts' || mod.startsWith('@contracts/')) {
+      const rel = mod === '@contracts' ? 'index.ts' : mod.slice('@contracts/'.length);
+      const resolved = path.resolve(CONTRACTS_DIR, rel);
+      if (!(resolved.startsWith(CONTRACTS_DIR + path.sep) || resolved === CONTRACTS_DIR)) {
+        const line = src.slice(0, index).split('\n').length;
+        problems.push({ line, msg: `${kind} 跳出 contracts：${mod}` });
       }
       return;
     }
@@ -114,6 +129,8 @@ function checkFile(file) {
 
 function main() {
   const files = listJsFiles(CORE_DIR);
+  // 契约包同样必须零平台依赖（桌面端与服务端都直接引用它）
+  const contractFiles = listJsFiles(CONTRACTS_DIR);
 
   if (files.length === 0) {
     console.log('[check-core] src/core/ 还没有文件——S1 建立后再守护。跳过。');
@@ -121,7 +138,7 @@ function main() {
   }
 
   let total = 0;
-  for (const file of files) {
+  for (const file of [...files, ...contractFiles]) {
     const problems = checkFile(file);
     if (problems.length === 0) continue;
     const rel = path.relative(ROOT, file).replace(/\\/g, '/');
@@ -132,10 +149,10 @@ function main() {
   }
 
   if (total === 0) {
-    console.log(`[check-core] 通过：${files.length} 个 core 文件均无平台依赖`);
+    console.log(`[check-core] 通过：${files.length} 个 core 文件 + ${contractFiles.length} 个 contracts 文件均无平台依赖`);
     return 0;
   }
-  console.error(`[check-core] 失败：${total} 处违规。core 必须零平台依赖（见 docs/ROADMAP.md 第六节）。`);
+  console.error(`[check-core] 失败：${total} 处违规。core 与 contracts 必须零平台依赖（见 docs/ROADMAP.md 第六节）。`);
   return 1;
 }
 

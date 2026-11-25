@@ -1,12 +1,15 @@
 #!/usr/bin/env node
-// 把 docs/legal/*.md 转成 src/legal-data.js（应用内展示用，零依赖）
-// usage: node scripts/build-legal.js
+// 把仓库根 docs/legal/*.md 转成 packages/desktop/src/legal-data.js（应用内展示用，零依赖）
+// usage: node packages/desktop/scripts/build-legal.js
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.join(__dirname, '..');
-const SRC = path.join(ROOT, 'docs', 'legal');
-const OUT = path.join(ROOT, 'src', 'legal-data.js');
+/** 本包根目录（packages/desktop） */
+const PKG = path.join(__dirname, '..');
+/** 仓库根目录（法律文档在共享的 docs/ 下） */
+const REPO_ROOT = path.join(PKG, '..', '..');
+const SRC = path.join(REPO_ROOT, 'docs', 'legal');
+const OUT = path.join(PKG, 'src', 'legal-data.js');
 
 const DOCS = [
   { key: 'privacy', file: 'privacy-policy.md', title: '隐私政策' },

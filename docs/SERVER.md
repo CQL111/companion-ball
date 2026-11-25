@@ -231,12 +231,18 @@ const BLOCKED = [
 
 ## 七、部署
 
+> 2026-11-25 起服务端代码在 `packages/server/`（monorepo workspace），命令需在包内执行。
+
 ```bash
-cd server
-npm install
-npx wrangler d1 create companion-bottles      # 首次
-npx wrangler d1 execute companion-bottles --file=./schema.sql --remote
-npx wrangler deploy
+npm install -w @companion/server               # 根目录执行
+npm run -w @companion/server db:init           # D1 建表（首次）
+npm run -w @companion/server deploy            # 部署 Worker
+```
+
+首次创建数据库（在 `packages/server/` 下）：
+
+```bash
+npx wrangler d1 create companion-bottles      # 把返回的 database_id 填进 wrangler.toml
 ```
 
 环境变量（`wrangler.toml`）：
