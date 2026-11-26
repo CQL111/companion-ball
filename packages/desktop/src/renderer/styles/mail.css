@@ -137,3 +137,11 @@ textarea:focus { border-color: var(--glass-hairline); }
 .btn.ghost { background: transparent; color: var(--text-2); }
 
 .mail-hint-warn { color: var(--warning, #f0b060); }
+
+/* ---------- 收信列表 ---------- */
+.grow { flex: 1; }
+.btn.sm { padding: 4px 10px; font-size: 11.5px; }
+.mail-inbox { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.mail-inbox li { padding: 10px 12px; border-radius: var(--r-sm); background: var(--glass-1); border: 1px solid var(--glass-hairline); }
+.mail-quote-sm { margin: 0 0 6px; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.mail-inbox .mail-hint { margin: 0; font-size: 11px; }

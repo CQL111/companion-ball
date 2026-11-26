@@ -67,7 +67,11 @@ export async function pick(req: Request, cfg: ServerConfig, tokenHash: string, n
   const pool = poolFor(now, readOffset(body))
 
   for (let attempt = 0; attempt < 3; attempt++) {
-    const row = await bottles.findPickCandidate(db, { pool, now, maxPicks: limits.maxPicks, tokenHash })
+    const row = await bottles.findPickCandidate(
+      db,
+      { pool, now, maxPicks: limits.maxPicks, tokenHash },
+      { ignorePool: cfg.intraTest === true },
+    )
     if (!row) return json({ ok: true, bottle: null })
     if (!(await bottles.claimPick(db, row.id, limits.maxPicks))) continue // 被抢走了，换一张
     await bottles.recordPick(db, row.id, tokenHash, now)

@@ -141,6 +141,33 @@ export async function fetchInbox(): Promise<MailResult<ReplyDTO[]>> {
   return { ok: true, data: r.data }
 }
 
+/**
+ * 收信箱：与 fetchInbox 不同，**只读不写笔记本**。
+ *
+ * 为什么分开：笔记本是日记，重复刷新会把同一封回信写进去好几遍。
+ * 收信列表允许反复看；写进日记只该发生一次（用户主动点「收下」）。
+ */
+export async function peekInbox(): Promise<MailResult<ReplyDTO[]>> {
+  const r = await fetchInbox()
+  if (!r.ok || !r.data) return r
+  return { ok: true, data: r.data }
+}
+
+/** 用户确认收下某几封 → 写进当天日记（每封只写一次） */
+export function keepReplies(replies: ReplyDTO[]): number {
+  const nb = getNotebook()
+  let added = 0
+  for (const r of replies) {
+    const line = `「${r.replyAlias}」回了我一句：${r.replyBody}`
+    // 已经记过的不重复写（按内容判断，回信内容 + 别名是一样的）
+    const exists = nb.entries.some((e) => e.lines.includes(line))
+    if (exists) continue
+    noteBottleInNotebook('reply', r.replyBody, r.replyAlias)
+    added++
+  }
+  return added
+}
+
 // ---------- 举报 ----------
 export async function report(target: { bottleId?: string; replyId?: string }, reason: 'spam' | 'abuse' | 'other'): Promise<MailResult<true>> {
   const ep = endpoint()

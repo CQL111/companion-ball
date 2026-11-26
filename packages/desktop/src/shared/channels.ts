@@ -63,6 +63,7 @@ export const CH = {
   bottlePick: 'bottle-pick',
   bottleReply: 'bottle-reply',
   bottleInbox: 'bottle-inbox',
+  bottleInboxKeep: 'bottle-inbox-keep',
   bottleReport: 'bottle-report',
   openMail: 'open-mail',
   bottlePatrolNow: 'bottle-patrol-now',

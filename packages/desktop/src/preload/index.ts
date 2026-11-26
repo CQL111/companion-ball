@@ -56,6 +56,7 @@ const api: CompanionApi = {
   bottlePick: (force) => ipcRenderer.invoke(CH.bottlePick, !!force),
   bottleReply: (bottleId, body) => ipcRenderer.invoke(CH.bottleReply, bottleId, body),
   bottleInbox: () => ipcRenderer.invoke(CH.bottleInbox),
+  bottleInboxKeep: (replies) => ipcRenderer.invoke(CH.bottleInboxKeep, replies),
   bottleReport: (target, reason) => ipcRenderer.invoke(CH.bottleReport, target, reason),
   openMail: () => ipcRenderer.invoke(CH.openMail),
   bottlePatrolNow: () => ipcRenderer.invoke(CH.bottlePatrolNow),

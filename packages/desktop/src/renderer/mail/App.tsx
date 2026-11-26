@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { BottleStatusView } from '../../shared/types'
+import type { BottleReplyView, BottleStatusView } from '../../shared/types'
 
 type Phase = 'write' | 'sent' | 'reading' | 'replied'
 
@@ -24,6 +24,10 @@ export default function App(): React.ReactElement {
   const [requestPublic, setRequestPublic] = useState(false)
   /** 刚扔出的那张是否已提交公开审核 */
   const [sentPublic, setSentPublic] = useState(false)
+  /** 收到的回信（只读列表；点「收下」才写进日记） */
+  const [inbox, setInbox] = useState<BottleReplyView[] | null>(null)
+  const [inboxBusy, setInboxBusy] = useState(false)
+  const [keptCount, setKeptCount] = useState(0)
 
   const load = useCallback(async () => {
     try {
@@ -61,6 +65,39 @@ export default function App(): React.ReactElement {
       window.logger.info('mail.throw', 'ok')
     } finally {
       setBusy(false)
+    }
+  }
+
+  /** 打开收信列表（只读，不会重复写日记） */
+  const openInbox = async (): Promise<void> => {
+    setInboxBusy(true)
+    setMsg({ kind: '', text: '' })
+    setKeptCount(0)
+    try {
+      const r = await window.api.bottleInbox()
+      if (!r.ok) {
+        setMsg({ kind: 'err', text: r.errorText || '海面不太平静' })
+        return
+      }
+      const list = r.data || []
+      setInbox(list)
+      if (!list.length) setMsg({ kind: '', text: '还没有人回你。再等等。' })
+    } finally {
+      setInboxBusy(false)
+    }
+  }
+
+  /** 把回信收进日记 */
+  const keepAll = async (): Promise<void> => {
+    if (!inbox?.length) return
+    setInboxBusy(true)
+    try {
+      const n = await window.api.bottleInboxKeep(inbox)
+      setKeptCount(n)
+      if (n) setMsg({ kind: 'ok', text: `收下了 ${n} 封，写进今天的日记了。` })
+      else setMsg({ kind: '', text: '这些已经在日记里了。' })
+    } finally {
+      setInboxBusy(false)
     }
   }
 
@@ -192,9 +229,51 @@ export default function App(): React.ReactElement {
             </button>
           </div>
           <hr className="mail-sep" />
-          <button className="btn" onClick={() => void goPick()} disabled={busy}>
-            {waiting ? '猫出门了…' : '让猫出去看看'}
-          </button>
+          <div className="mail-row">
+            <button className="btn" onClick={() => void goPick()} disabled={busy}>
+              {waiting ? '猫出门了…' : '让猫出去看看'}
+            </button>
+            <button className="btn ghost" onClick={() => void openInbox()} disabled={inboxBusy}>
+              {inbox === null ? '收到的回信' : '重新看看回信'}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* 收信列表：只读；点「收下」才写进日记 */}
+      {inbox !== null && phase === 'write' && (
+        <section className="mail-card">
+          <div className="mail-row">
+            <span className="mail-from">别人回你的话</span>
+            <span className="grow" />
+            {inbox.length > 0 && (
+              <button className="btn sm" onClick={() => void keepAll()} disabled={inboxBusy}>
+                {keptCount ? '已经收下了' : '收下，记进日记'}
+              </button>
+            )}
+            <button className="btn ghost sm" onClick={() => setInbox(null)}>
+              收起
+            </button>
+          </div>
+
+          {inbox.length === 0 ? (
+            <p className="mail-hint" style={{ marginTop: 10 }}>
+              还没有人回你。纸条可能还在漂着，也可能已经沉海了。
+            </p>
+          ) : (
+            <ul className="mail-inbox">
+              {inbox.map((r) => (
+                <li key={`${r.bottleId}-${r.createdAt}`}>
+                  <p className="mail-quote mail-quote-sm">{r.replyBody}</p>
+                  <p className="mail-hint">
+                    —— {r.replyAlias}，回的是你写的「{r.bottleBody}」
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <p className="mail-hint">回了就断了：你没法再联系 ta，ta 也不会知道你收到了。</p>
         </section>
       )}
 

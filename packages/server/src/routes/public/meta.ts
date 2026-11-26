@@ -24,7 +24,7 @@ export async function meta(cfg: ServerConfig, now: number): Promise<Response> {
       /** 公告：空字符串表示没有 */
       notice: '',
       /** 站点地址（桌面端做「看看此刻的海」的跳转用） */
-      site: 'https://boringtime.cn',
+      site: cfg.siteUrl || 'https://boringtime.cn',
       now,
     },
     200,

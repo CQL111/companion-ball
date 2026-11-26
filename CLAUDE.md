@@ -37,6 +37,7 @@
 | `docs/OCCASIONS.md` | P1.5 事件记忆：随口说一句 → 记住 → 接住（数据模型、规则、验收） |
 | `docs/PLATFORM.md` | 平台架构：网页橱窗 / 新闻 / 管理后台 / monorepo / 资源评估 |
 | `docs/WINDOW.md` | **窗口与灯塔**：漂流瓶主页 + 运营后台的产品设计（为什么不是社区） |
+| `docs/INTERNAL-TEST.md` | **内测手册**：IP 直连 + 2 人 + 手动审批 SQL（不开后台） |
 | `docs/LOCAL-DEV.md` | **本地怎么跑**：一条命令起服务端 + 前台 + 后台 |
 | `docs/BUILD-PLATFORM.md` | **平台施工图**：同源单 Worker、迁移机制、模块拆分、测试骨架、CI、上线清单 |
 | `docs/PLATFORM-S0.md` | 平台 S0 执行清单：workspaces、契约收敛、server 迁入、守卫适配、发布渠道、CI |

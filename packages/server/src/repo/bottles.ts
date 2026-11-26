@@ -58,17 +58,28 @@ export async function insertBottle(
 export async function findPickCandidate(
   db: Db,
   args: { pool: string; now: number; maxPicks: number; tokenHash: string },
+  /**
+   * ignorePool = 不限时段池。
+   * 只给内测用（2 个人分时段上线，否则永远碰不到）。
+   * 正式运营必须为 false —— 「同时段的人更容易共鸣」是产品设计，不是缺陷。
+   */
+  opts: { ignorePool?: boolean } = {},
 ): Promise<PickCandidate | null> {
+  const poolClause = opts.ignorePool ? '' : 'b.pool = ? AND '
+  const params: unknown[] = opts.ignorePool
+    ? [args.now, args.maxPicks, args.tokenHash, args.tokenHash]
+    : [args.pool, args.now, args.maxPicks, args.tokenHash, args.tokenHash]
+
   const row = await db
     .prepare(
       `SELECT b.id, b.body, b.alias
          FROM bottles b
-        WHERE b.pool = ? AND b.expires_at > ? AND b.hidden = 0 AND b.reply_id IS NULL
+        WHERE ${poolClause}b.expires_at > ? AND b.hidden = 0 AND b.reply_id IS NULL
           AND b.picks < ? AND b.author_token <> ?
           AND NOT EXISTS (SELECT 1 FROM picks p WHERE p.bottle_id = b.id AND p.picker_token = ?)
         ORDER BY RANDOM() LIMIT 1`,
     )
-    .bind(args.pool, args.now, args.maxPicks, args.tokenHash, args.tokenHash)
+    .bind(...params)
     .first<PickCandidate>()
   return row ?? null
 }

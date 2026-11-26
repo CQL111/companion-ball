@@ -121,3 +121,33 @@ describe('完整联调链路', () => {
     expect([...after.items, ...afterDay.items]).toHaveLength(0)
   })
 })
+
+describe('内测模式：忽略时段池', () => {
+  it('默认按池匹配（分时段碰不到）', async () => {
+    const db = await makeDb()
+    const cfg = makeCfg(db)
+    // 东八区白天写
+    await handleRequest(req('/v1/bottle', { body: '白天写的', utcOffsetMinutes: 480 }), cfg)
+    // 用夜里 3 点去捡：池不同 → 捡不到
+    const night = new Date()
+    night.setHours(3, 0, 0, 0)
+    const realNow = Date.now
+    Date.now = () => night.getTime()
+    try {
+      const res = await handleRequest(req('/v1/bottle/pick', { utcOffsetMinutes: 480 }, { token: 'other-device-token-0123456789' }), cfg)
+      const j = (await res.json()) as { bottle: unknown }
+      expect(j.bottle).toBe(null)
+    } finally {
+      Date.now = realNow
+    }
+  })
+
+  it('INTRA_TEST=1 时任何时段都能捡到', async () => {
+    const db = await makeDb()
+    const cfg = makeCfg(db, { intraTest: true })
+    await handleRequest(req('/v1/bottle', { body: '白天写的', utcOffsetMinutes: 480 }), cfg)
+    const res = await handleRequest(req('/v1/bottle/pick', { utcOffsetMinutes: -480 }, { token: 'other-device-token-0123456789' }), cfg)
+    const j = (await res.json()) as { bottle: { body: string } | null }
+    expect(j.bottle?.body).toBe('白天写的')
+  })
+})

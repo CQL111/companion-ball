@@ -1,5 +1,8 @@
 # 自建服务器部署（VPS）
 
+> **只是 2 人内测、用 IP 直连、不用后台？** 看 [`INTERNAL-TEST.md`](INTERNAL-TEST.md) ——
+> 那份更短，且写清了「没有后台时怎么批准公开瓶」。本文是带域名 + HTTPS 的正式部署。
+
 > 为什么需要这台：`*.workers.dev` 在国内不可达，Cloudflare 方案对国内用户失效。
 > 服务端已重构为「**一套业务逻辑，两个运行时**」——同一份 `handler.ts` 可以跑在
 > Workers 或任何 Node 22.5+ 的机器上，迁回 Cloudflare 也不需要改业务代码。
@@ -38,7 +41,7 @@ TRUST_PROXY=1 \
 node --experimental-sqlite packages/server/dist/node.mjs
 ```
 
-首次启动会自动执行 `schema.sql` 建表（含 `rate_counters`）。**建表失败会直接退出**，
+首次启动会按序执行 `migrations/*.sql`（当前 6 个），并记录到 `schema_migrations`。**建表失败会直接退出**，
 不会「看起来在跑但接口全 500」。
 
 ## 三、systemd 守护
@@ -185,4 +188,4 @@ curl -s -X POST $H/v1/bottle/pick -H "X-Device-Token: $B" \
 1. `wrangler.toml` 的 `main = "src/worker.ts"`（已是）
 2. 给 Worker **绑定自定义域名**（不能用 `*.workers.dev`）
 
-D1 的数据库需要用 `wrangler d1 execute --file=schema.sql` 重新建表，数据不自动迁移。
+D1 的数据库需要 `wrangler d1 migrations apply`（与 Node 共用同一套 `migrations/`），数据不自动迁移。

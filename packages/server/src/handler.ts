@@ -36,6 +36,13 @@ export interface ServerConfig {
   socketIp?: string
   /** 后台 Cookie 的期望 Origin（同源部署下即站点域名） */
   siteOrigin?: string
+  /** 对外展示的站点地址（meta 里给桌面端跳转用）；默认 boringtime.cn */
+  siteUrl?: string
+  /**
+   * 内测模式：捡瓶时**忽略时段池**。
+   * 只给「2 个人、分时段上线」的场景用，正式运营必须为 false。
+   */
+  intraTest?: boolean
   /** TOTP 主密钥（base64，来自 secret） */
   totpMasterKey?: string
   /** 爬虫推送线索的 service token */

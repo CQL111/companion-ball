@@ -180,6 +180,7 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 | `docs/OCCASIONS.md` | P1.5 事件记忆规格：数据模型、抽取、隐式确认、接住节奏、验收 | 工程 |
 | `docs/PLATFORM.md` | 平台架构：网页橱窗 / 新闻管道 / 管理后台 / monorepo / 资源评估 | 产品 / 工程 |
 | `docs/WINDOW.md` | **窗口与灯塔**：漂流瓶主页 + 运营后台产品设计；「不是社区」的判据与红线 | 产品 |
+| `docs/INTERNAL-TEST.md` | **内测手册**：IP 直连 + 手动审批 SQL | 工程 |
 | `docs/LOCAL-DEV.md` | **本地怎么跑**：`npm run dev:platform` 一条命令起全部 | 工程 |
 | `docs/BUILD-PLATFORM.md` | **平台施工图**：同源单 Worker、迁移、模块拆分、测试、CI、上线清单 | 工程 |
 | `docs/PLATFORM-S0.md` | 平台 S0 执行清单：workspaces、契约收敛、server 迁入、守卫适配、发布渠道、CI | 工程 |

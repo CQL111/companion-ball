@@ -168,6 +168,15 @@ export interface ImportResult {
   stats?: { memories: number; diaryEntries: number }
 }
 
+/** 一封收到的回信（客户端视图） */
+export interface BottleReplyView {
+  bottleId: string
+  bottleBody: string
+  replyBody: string
+  replyAlias: string
+  createdAt: number
+}
+
 export interface BottleStatusView {
   enabled: boolean
   endpoint: string
@@ -259,7 +268,10 @@ export interface CompanionApi {
   bottleThrow(body: string, requestPublic?: boolean): Promise<MailApiResult<{ id: string; alias: string; publicPending: boolean }>>
   bottlePick(force?: boolean): Promise<MailApiResult<{ id: string; body: string; alias: string } | null>>
   bottleReply(bottleId: string, body: string): Promise<MailApiResult<true>>
-  bottleInbox(): Promise<MailApiResult<Array<{ bottleBody: string; replyBody: string; replyAlias: string; createdAt: number }>>>
+  /** 收信列表（只读，不写日记） */
+  bottleInbox(): Promise<MailApiResult<BottleReplyView[]>>
+  /** 用户点「收下」→ 写进当天日记；返回实际新增的条数 */
+  bottleInboxKeep(replies: BottleReplyView[]): Promise<number>
   bottleReport(target: { bottleId?: string; replyId?: string }, reason: 'spam' | 'abuse' | 'other'): Promise<MailApiResult<true>>
   openMail(): Promise<boolean>
   bottlePatrolNow(): Promise<MailApiResult<{ alias: string; body: string } | null>>

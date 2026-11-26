@@ -151,6 +151,8 @@ export async function startServer(): Promise<{ close(): Promise<void>; port: num
     downloadBaseUrl: process.env.DOWNLOAD_BASE_URL || '',
     trustProxy: process.env.TRUST_PROXY === '1',
     siteOrigin: process.env.SITE_ORIGIN || '',
+    siteUrl: process.env.SITE_URL || '',
+    intraTest: process.env.INTRA_TEST === '1',
     totpMasterKey: process.env.TOTP_MASTER_KEY || '',
     newsIngestToken: process.env.NEWS_INGEST_TOKEN || '',
     assets: existsSync(join(PKG_ROOT, 'public')) ? createStaticServer(join(PKG_ROOT, 'public')) : undefined,

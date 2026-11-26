@@ -514,12 +514,17 @@ export function registerIpc(): void {
     return r
   })
 
-  handle(CH.bottleInbox, async () => {
-    const r = await mail.fetchInbox()
-    if (r.ok && r.data) {
-      for (const item of r.data) mail.noteBottleInNotebook('reply', item.replyBody, item.replyAlias)
-    }
-    return r
+  // 收信：**只读**。反复打开列表不该把同一封回信写进日记好几遍。
+  handle(CH.bottleInbox, async () => mail.peekInbox())
+
+  // 用户点「收下」时才写进当天日记（按内容去重，重复点不会重复写）
+  handle(CH.bottleInboxKeep, async (_e, replies: unknown) => {
+    if (!Array.isArray(replies)) return 0
+    const list = replies.filter(
+      (r): r is { bottleId: string; bottleBody: string; replyBody: string; replyAlias: string; createdAt: number } =>
+        !!r && typeof r === 'object' && typeof (r as { replyBody?: unknown }).replyBody === 'string',
+    )
+    return mail.keepReplies(list)
   })
 
   handle(CH.bottleReport, async (_e, target: unknown, reason: unknown) => {

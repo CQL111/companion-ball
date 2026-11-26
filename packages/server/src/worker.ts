@@ -52,6 +52,8 @@ export default {
       // Workers 前面一定有 Cloudflare，CF-Connecting-IP 由平台注入、不可伪造
       trustProxy: true,
       siteOrigin: env.SITE_ORIGIN || '',
+      siteUrl: (env as unknown as { SITE_URL?: string }).SITE_URL || '',
+      intraTest: (env as unknown as { INTRA_TEST?: string }).INTRA_TEST === '1',
       totpMasterKey: (env as unknown as { TOTP_MASTER_KEY?: string }).TOTP_MASTER_KEY || '',
       newsIngestToken: (env as unknown as { NEWS_INGEST_TOKEN?: string }).NEWS_INGEST_TOKEN || '',
       assets: env.ASSETS,
