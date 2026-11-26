@@ -20,7 +20,7 @@ import { grabLoco, initLoco, releaseLoco, stepLoco, syncLocoPosition, type Bound
 import { playSound, setSoundEnabled } from './sound'
 import { gazeToward, isPayingAttention, reactionFor, zoneAt } from '../../core/touch'
 import { clipForState, type ClipName } from '../../core/motion'
-import { bucketFor, chooseObservation, composeSpeech, speechText, type Observation } from '../../core/speech'
+import { bucketFor, chooseObservation, composeSpeech, speechText, RETURN_GREET_MIN_MS, type Observation } from '../../core/speech'
 import { initNeeds, nextNeed, pickNeedLine, pickSatisfiedLine, reduceNeeds, type NeedKind, type NeedsState } from '../../core/needs'
 import { canExpressNeed, planForNeed } from '../../core/needMotion'
 import { loadSkin, type SpriteRenderer } from './renderer'
@@ -74,6 +74,12 @@ let needs: NeedsState = initNeeds(Date.now(), '')
 let lastSpokeAt = 0
 /** 主进程上报的久坐分钟数（0 = 没有） */
 let sittingMinutes = 0
+/**
+ * S4 修复：用户刚回来、还没打过招呼。
+ * 以前 evaluateSpeech 从不传 justReturned，所以主进程发了 presence-back，
+ * 它也只是身体动一下，永远不会说你期待的那句「你回来了」。
+ */
+let pendingReturn: { awayMs: number } | null = null
 /** 上一次由 UI 主动展示的气泡时间，用于「打扰预算」 */
 let lastBubbleAt = 0
 
@@ -150,10 +156,15 @@ function evaluateSpeech(): void {
     lastInteractAt: petState.lastInteractAt,
     sittingMinutes,
     pendingNeed: needs.active,
+    // 刚回来：让 chooseObservation 把它变成一个「观察」，
+    // 否则无论离开多久，它都只会用 tap 组的台词
+    justReturned: !!pendingReturn,
+    awayMinutes: pendingReturn ? Math.round(pendingReturn.awayMs / 60000) : undefined,
     lastSpokeAt,
     speaking: false,
   })
-  speakWithReason(obs)
+  // 开口成功才清掉；被预算挡住就留到下一次，不丢
+  if (speakWithReason(obs)) pendingReturn = null
   // 注意：需求说出口后**不立刻标记为满足**——要等用户真的碰它。
   // 否则「需求」就退化成「一句台词」，不会让人产生参与感。
 }
@@ -238,7 +249,10 @@ function dispatch(event: PetEvent): void {
     window.setTimeout(() => showBubble(pickSatisfiedLine(kind)), 1200)
   }
   if (r.trigger === 'wake') justWokeUntil = Date.now() + 900
-  if (r.trigger) speak(pickBucket(r.trigger, event.now, petState.dragging), event.now)
+  // 回来时的台词**只**由 evaluateSpeech 的「观察 → 台词」路径说，
+  // 而且要过 RETURN_ACK_MS。否则 Win+L 一秒钟也会被念一句，回来就变成噪音。
+  const skipTrigger = r.trigger === 'return'
+  if (r.trigger && !skipTrigger) speak(pickBucket(r.trigger, event.now, petState.dragging), event.now)
   if (moodChanged || r.trigger) persistPetState()
   // S2：交互计数供日记使用（点击 / 拖动 / 唤醒才算，不是每秒 tick）
   if (event.type !== 'tick' && event.type !== 'pointer-leave') void window.api.bumpInteraction()
@@ -380,13 +394,17 @@ window.api.onPresenceAway(() => {
   window.logger.info('presence', 'user away')
 })
 
-window.api.onPresenceBack(({ awayMs }) => {
+/** 用户回来：IPC 与调试入口共用同一条路径，保证测的是真流程 */
+function handlePresenceBack({ awayMs }: { awayMs: number }): void {
   window.logger.info('presence', `user back after ${Math.round(awayMs / 60000)}min`)
   dispatch({ type: 'returned', now: Date.now(), awayMs })
   // 离开很久：先闷一下，再说一句；短时间离开：抬头看你
   if (awayMs >= 2 * 60 * 60 * 1000) grumbleUntil = Date.now() + 2000
   else patUntil = Date.now() + 1200
-})
+  // 离开够久才值得开口（Win+L 一秒回来不该被念一句）
+  if (awayMs >= RETURN_GREET_MIN_MS) pendingReturn = { awayMs }
+}
+window.api.onPresenceBack(handlePresenceBack)
 
 window.api.onPresenceSit(({ minutes }) => {
   // 久坐是「观察」而不是「通知」：文案由观察 + 台词合成
@@ -445,6 +463,11 @@ if (__COMPANION_DEBUG__) {
         ballInner.setAttribute('data-mood', petState.mood)
         paintClip()
         return petState.mood
+      },
+      returnBack(awayMs) {
+        // 与 IPC 完全同一条路径；测试入口绕过打扰预算
+        lastBubbleAt = 0
+        handlePresenceBack({ awayMs })
       },
     })
   })

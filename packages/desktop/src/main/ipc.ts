@@ -15,6 +15,7 @@ import * as occasions from './occasions'
 import * as dailyLog from './dailyLog'
 import * as mail from './mail'
 import { createMailWindow } from './mailWindow'
+import { eraseMargin, writeMargin } from './margin'
 import * as weather from './weatherService'
 import * as memory from '../core/memory'
 import * as notebook from '../core/notebook'
@@ -44,7 +45,7 @@ import {
 } from './windows'
 import { PERSONAS, broadcastPersona, rebuildTrayMenu, resetBallPosition } from './tray'
 import { CH, EV } from '../shared/channels'
-import { configKeySchema, debugAwayMsSchema, localModelSchema, memoryIdSchema, occasionConsumeSchema, occasionsIdSchema, petNameSchema, rectSchema } from '../shared/ipc'
+import { configKeySchema, debugAwayMsSchema, localModelSchema, marginSchema, memoryIdSchema, occasionConsumeSchema, occasionsIdSchema, petNameSchema, rectSchema } from '../shared/ipc'
 import type { AiConfig, Persona } from '../shared/types'
 
 type WeatherStatusPlace = { city: string; label: string; latitude: number; longitude: number }
@@ -291,8 +292,30 @@ export function registerIpc(): void {
   })
 
   handle(CH.getNotebookView, () => ({
-    entries: notebook.recentEntries(getNotebook(), 60).map((e) => ({ date: e.date, lines: e.lines })),
+    entries: notebook.recentEntries(getNotebook(), 60).map((e) => ({
+      date: e.date,
+      lines: e.lines,
+      ...(e.margin ? { margin: { text: e.margin.text, createdAt: e.margin.createdAt } } : {}),
+    })),
   }))
+
+  // P2 页边一句话：写 / 抹。没有「读取单条」通道——页边随笔记本一起读。
+  handle(CH.writeNotebookMargin, (_e, payload: unknown) => {
+    const p = marginSchema.safeParse(payload)
+    if (!p.success) return null
+    const entry = writeMargin(p.data.date, p.data.text)
+    if (!entry) return null
+    return {
+      date: entry.date,
+      lines: entry.lines,
+      ...(entry.margin ? { margin: { text: entry.margin.text, createdAt: entry.margin.createdAt } } : {}),
+    }
+  })
+
+  handle(CH.eraseNotebookMargin, (_e, date: unknown) => {
+    if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false
+    return eraseMargin(date)
+  })
 
   handle(CH.exportNotebookMarkdown, async () => {
     const md = notebook.toMarkdown(getNotebook())
@@ -306,6 +329,10 @@ export function registerIpc(): void {
     logger.info('notebook.export', 'markdown saved')
     return { ok: true, path: filePath }
   })
+
+  // P2：导出内容本身（不弹对话框）。让「页边话确实进了导出」变成可验证的事实，
+  // 而不是只能靠人点开文件看。渲染端不用它，只给测试与调试用。
+  handle(CH.notebookMarkdownPreview, () => notebook.toMarkdown(getNotebook()))
 
   handle(CH.getMemories, () => {
     const list = getMemories().slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))

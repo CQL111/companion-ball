@@ -23,6 +23,39 @@ export interface DiaryEntry {
    *   absence  = 长时间离开后回来写的（真实事件，不能被覆盖）
    */
   source: 'template' | 'absence'
+  /**
+   * P2 页边一句话：用户在这一页留下的私密回话。
+   * 与 `lines` 完全隔离——猫的日记怎么重算都不会碰它。
+   * 可以写在任意一页（旧的那页也能补一句）。
+   */
+  margin?: MarginNote
+}
+
+/**
+ * 页边一句话（M4）。
+ * 硬限制（都写成了测试）：≤1 行、非即时（没有回复通道）、不可公开。
+ * 它是最好的记忆素材，但**永远不进任何出网通路**（P2 验收红线）。
+ */
+export interface MarginNote {
+  /** 本地日期 YYYY-MM-DD（写下这句的那天） */
+  date: string
+  text: string
+  createdAt: string // UTC ISO
+}
+
+export const MARGIN_MAX_CHARS = 60
+
+/**
+ * 规范化一条页边话。返回 null 表示这句不该被留下。
+ * 规则：
+ *   1. 只有一行——换行折成空格（不让它变回聊天框）
+ *   2. 去掉首尾空白；空的不要
+ *   3. 超长截断，**不报错**——页边不该有表单校验的压迫感
+ */
+export function normalizeMargin(text: string): string | null {
+  const one = String(text).replace(/\s+/g, ' ').trim()
+  if (!one) return null
+  return one.length > MARGIN_MAX_CHARS ? one.slice(0, MARGIN_MAX_CHARS) : one
 }
 
 export interface Notebook {
@@ -106,22 +139,68 @@ export function upsertDiary(notebook: Notebook, now: number, lines: string[], so
   const date = dateKey(now)
   const createdAt = new Date(now).toISOString()
   const prev = notebook.entries.find((e) => e.date === date)
+  // P2：页边一句话是用户的东西，日记怎么重算都必须原样带过去。
+  const margin = prev?.margin
 
   // 模板日记不能覆盖缺席日记（但缺席可以补充/覆盖模板）
   if (source === 'template' && prev?.source === 'absence' && lines.length) {
     // 保留缺席那几句，把模板内容接在后面（总长 ≤4）
     const merged = [...prev.lines, ...lines].slice(0, 4)
     const entries = notebook.entries.filter((e) => e.date !== date)
-    entries.push({ date, createdAt, lines: merged, source: 'absence' })
+    entries.push({ date, createdAt, lines: merged, source: 'absence', ...(margin ? { margin } : {}) })
     entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
     return { version: 1, entries: entries.slice(0, MAX_ENTRIES) }
   }
 
   const entries = notebook.entries.filter((e) => e.date !== date)
   // 空白日记不落盘：没有话说就不留痕（避免制造「今天没记录」的压力）
-  if (lines.length) entries.push({ date, createdAt, lines, source })
+  // ——但如果用户在空白的一页留了话，这一页必须存在，否则他的话就没了
+  if (lines.length || margin) {
+    entries.push({ date, createdAt, lines, source, ...(margin ? { margin } : {}) })
+  }
   entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
   return { version: 1, entries: entries.slice(0, MAX_ENTRIES) }
+}
+
+/**
+ * 在某一页留一句话（P2）。
+ * 返回 null 表示这句不该被留下（空的 / 全是空白）。
+ *
+ * 允许写在任意一页——包括猫那天什么都没写的空白页。
+ * 一页只有一句：再留会覆盖上一句，因为「页边」的隐喻就是只有那么窄一条。
+ */
+export function writeMargin(
+  notebook: Notebook,
+  date: string,
+  text: string,
+  now: number,
+): Notebook | null {
+  const one = normalizeMargin(text)
+  if (!one) return null
+
+  const createdAt = new Date(now).toISOString()
+  const margin: MarginNote = { date: dateKey(now), text: one, createdAt }
+  const existing = notebook.entries.find((e) => e.date === date)
+
+  if (existing) {
+    const entries = notebook.entries.map((e) => (e.date === date ? { ...e, margin } : e))
+    return { version: 1, entries }
+  }
+
+  // 空白页也要建出来：用户写的话不能被「空白不落盘」的规则吞掉
+  const entries = [...notebook.entries, { date, createdAt, lines: [], source: 'template' as const, margin }]
+  entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+  return { version: 1, entries: entries.slice(0, MAX_ENTRIES) }
+}
+
+/** 抹掉某一页的页边话（用户后悔了）。数据不保留。 */
+export function eraseMargin(notebook: Notebook, date: string): Notebook | null {
+  const existing = notebook.entries.find((e) => e.date === date)
+  if (!existing?.margin) return null
+  return {
+    version: 1,
+    entries: notebook.entries.map((e) => (e.date === date ? { ...e, margin: undefined } : e)),
+  }
 }
 
 /** 最近 N 天的日记（含今天，允许缺失） */
@@ -138,7 +217,12 @@ export function toMarkdown(notebook: Notebook): string {
     notebook.entries
       .slice()
       .sort((a, b) => (a.date < b.date ? 1 : -1))
-      .map((e) => `## ${e.date}\n\n${e.lines.map((l) => `- ${l}`).join('\n')}`)
+      .map((e) => {
+        const diary = e.lines.length ? e.lines.map((l) => `- ${l}`).join('\n') : '-'
+        // 页边一句话必须出现在导出里：它是用户自己写的，导出是「全量可带走」的承诺
+        const margin = e.margin ? `\n> 页边：${e.margin.text}` : ''
+        return `## ${e.date}\n\n${diary}${margin}`
+      })
       .join('\n\n') +
     '\n'
   )

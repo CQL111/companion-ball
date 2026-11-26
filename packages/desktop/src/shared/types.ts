@@ -98,7 +98,12 @@ export interface AgentProgressPayload {
 }
 
 export interface NotebookView {
-  entries: Array<{ date: string; lines: string[] }>
+  entries: Array<{
+    date: string
+    lines: string[]
+    /** P2 页边一句话：用户在这一页留下的话（没有则不返回） */
+    margin?: { text: string; createdAt: string }
+  }>
 }
 
 export interface MemoryView {
@@ -210,6 +215,15 @@ export interface CompanionApi {
   openNotebook(): Promise<boolean>
   getNotebookView(): Promise<NotebookView>
   exportNotebookMarkdown(): Promise<ExportResult>
+  /** P2：导出内容本身（不弹对话框），用于验证「页边话确实进了导出」 */
+  notebookMarkdownPreview(): Promise<string>
+  /**
+   * P2 页边一句话：在某一页留一句话。
+   * 返回写入后的那一页；null = 这句话不该被留下（空 / 全是空白）。
+   * 没有回复通道——它不会立刻回应什么。
+   */
+  writeNotebookMargin(payload: { date: string; text: string }): Promise<NotebookView['entries'][number] | null>
+  eraseNotebookMargin(date: string): Promise<boolean>
   getMemories(): Promise<MemoryListResult>
   deleteMemory(id: string): Promise<MemoryListResult>
   clearMemories(): Promise<MemoryListResult>

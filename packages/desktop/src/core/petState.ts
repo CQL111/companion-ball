@@ -158,6 +158,8 @@ export function reducePetState(
       return {
         state: {
           ...state,
+          // 闷一会儿再醒：把 lastInteractAt 拨到「刚才」，否则 idleMood 看到 60 分钟
+          // 没交互会立刻判睡（sleep），sulk 连一秒都撑不到。短离开不碰它。
           lastInteractAt: now,
           mood: 'sulk',
           hold: { mood: 'sulk', until: now + HOLD_MS.sulk },
@@ -168,7 +170,6 @@ export function reducePetState(
     return {
       state: {
         ...state,
-        lastInteractAt: now,
         mood: 'curious',
         hold: { mood: 'curious', until: now + HOLD_MS.curious },
       },

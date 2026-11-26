@@ -140,10 +140,17 @@ export interface SpeakContext {
   speaking: boolean
 }
 
+/**
+ * 离开至少这么久，回来才值得说一句。
+ * Win+L 一秒钟、去倒杯水，都不算「回来」——说了就成了噪音。
+ * 渲染端也用它做门槛：低于这个时长，回来只做身体反应，不开口。
+ */
+export const RETURN_GREET_MIN_MS = 30 * 60 * 1000
+
 export function chooseObservation(ctx: SpeakContext): Observation {
   const idleMinutes = Math.floor((ctx.now - ctx.lastInteractAt) / 60000)
 
-  if (ctx.justReturned && ctx.awayMinutes && ctx.awayMinutes >= 30) {
+  if (ctx.justReturned && ctx.awayMinutes && ctx.awayMinutes * 60000 >= RETURN_GREET_MIN_MS) {
     return { kind: 'user-back', awayMinutes: ctx.awayMinutes }
   }
   if (ctx.awayMinutes && ctx.awayMinutes >= 120) {

@@ -128,7 +128,9 @@ try {
     // 标记后不应再返回同一句（null / undefined / 空都算正确）
     check('一天只复述一次', !again, `mark=${marked} peek=${JSON.stringify(again)}`)
   } else {
-    check('18 点前不复述（当前 ' + hour + ' 点）', recap === null, recap)
+    // 注意：CDP 把 null 序列化成 value:null，evalIn 里的 `??` 会把它变成 undefined。
+    // 所以这里判「假值」，不能写 === null。
+    check('18 点前不复述（当前 ' + hour + ' 点）', !recap, JSON.stringify(recap))
   }
 
   // 5) 删除

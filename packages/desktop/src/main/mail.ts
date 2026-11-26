@@ -4,6 +4,7 @@
 import crypto from 'node:crypto'
 import * as mailbox from '../core/mailbox'
 import type { BottleDTO, ReplyDTO } from '../core/mailbox'
+import * as notebook from '../core/notebook'
 import { logger } from './services/logger'
 import * as api from './services/bottleApi'
 import { getNotebook, setNotebook, store } from './store'
@@ -170,16 +171,17 @@ export function markThrown(): void {
 /** 把收到的纸条与回信写进笔记本（同一容器，不另建列表） */
 export function noteBottleInNotebook(kind: 'picked' | 'reply', text: string, alias: string): void {
   const nb = getNotebook()
-  const date = new Date().toISOString().slice(0, 10)
+  const now = Date.now()
   const line =
     kind === 'picked' ? `捡到一张纸条，落款是「${alias}」：${text}` : `「${alias}」回了我一句：${text}`
+
+  // 不能 unshift 新条目：同一天如果已经有条目（含用户写的页边话），
+  // 插入第二条会让「日期唯一」的假设破裂，页边话就跟着那一页一起失联。
+  // upsertDiary 会保留既有条目的 margin。
+  const date = new Date(now).toISOString().slice(0, 10)
   const existing = nb.entries.find((e) => e.date === date)
-  if (existing) {
-    existing.lines = [...existing.lines, line].slice(0, 8)
-  } else {
-    nb.entries.unshift({ date, createdAt: new Date().toISOString(), lines: [line], source: 'template' })
-  }
-  setNotebook({ ...nb, entries: nb.entries.slice(0, 365) })
+  const lines = [...(existing?.lines ?? []), line].slice(0, 8)
+  setNotebook(notebook.upsertDiary(nb, now, lines, existing?.source ?? 'template'))
 }
 
 /** 托盘「让猫出门看看」：立即巡游一次（跳过节奏判断） */

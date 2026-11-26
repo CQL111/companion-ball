@@ -133,8 +133,11 @@ try {
     const ok = await evalIn(pet, `window.api.occasionsDismiss(${JSON.stringify(item.id)})`)
     check('划掉成功', ok === true)
     const afterDismiss = await evalIn(pet, `window.api.occasionsList()`)
+    // 划掉 = 用户点了 ×，界面语义是「别再出现」。
+    // 条目仍在存储里（备份可导出、30 天后清理），但不再占列表——
+    // 否则用户划掉了还能看见，会以为没生效。
     const still = afterDismiss.occasions.find((o) => o.id === item.id)
-    check('划掉后状态为 dismissed', still?.status === 'dismissed', still?.status)
+    check('划掉后从列表消失', !still, still ? JSON.stringify(still) : 'gone')
   }
   // 划掉后不复活的正确验证：用「明天」的事件（T-1 本来会触发），划掉后应静默
   const tomorrow = await evalIn(pet, `window.api.occasionDebugRemember('明天要体检')`)

@@ -26,6 +26,15 @@ export const memoryIdSchema = z.string().max(80)
 
 export const legalKeySchema = z.enum(['privacy', 'terms', 'disclaimer', 'thirdparty'])
 
+// ---------- 页边一句话（P2）----------
+/** 页边只有一行；上限定在 core 常量附近，宽一点给「不报错地截断」留余地 */
+export const marginSchema = z.object({
+  /** 写在哪一页（YYYY-MM-DD） */
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /** 正文；规范化（单行 / trim / 截断）在 core 里做 */
+  text: z.string().max(400),
+})
+
 /** 测试用：模拟缺席时长（毫秒），夹在 1 小时–30 天之间 */
 export const debugAwayMsSchema = z
   .number()

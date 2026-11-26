@@ -43,6 +43,71 @@ export function presenceOf(idleMs: number, opts: PresenceOptions = {}): Presence
   return idleMs >= awayAfter ? 'away' : 'active'
 }
 
+// ---------- 离开/回来 的转移（纯函数） ----------
+//
+// 为什么需要它：离开/回来的判断散在平台层会有两个坑，而且都真实发生过——
+//   1. 系统睡眠（合盖 / 息屏）时事件循环被冻结，「空闲超时」那条路根本不会跑；
+//      醒来后 getSystemIdleTime() 从 0 重新计，离开时长会被算成几十秒。
+//   2. 状态没有单一 owner：睡着了没标记离开，回来时 markBack() 早退，一个事件都不发。
+// 现在所有入口（轮询 / 锁屏 / suspend / resume）都走同一组转移，平台层只负责喂事件。
+
+export interface AbsenceSample {
+  active: boolean
+  /** 离开起点（active 时无意义） */
+  awaySince: number
+}
+
+export type AbsenceEvent =
+  | { type: 'away'; awayStart: number }
+  | { type: 'back'; awayStart: number; awayMs: number }
+
+export interface AbsenceStep {
+  next: AbsenceSample
+  /** null = 状态没变，什么都不用做 */
+  event: AbsenceEvent | null
+}
+
+function toAway(prev: AbsenceSample, awayStart: number): AbsenceStep {
+  if (!prev.active) return { next: prev, event: null }
+  return { next: { active: false, awaySince: awayStart }, event: { type: 'away', awayStart } }
+}
+
+function toBack(prev: AbsenceSample, now: number): AbsenceStep {
+  if (prev.active) return { next: prev, event: null }
+  return {
+    next: { active: true, awaySince: 0 },
+    event: { type: 'back', awayStart: prev.awaySince, awayMs: Math.max(0, now - prev.awaySince) },
+  }
+}
+
+/** 轮询：用系统空闲时长判断。这是常规路径（空闲 5 分钟算离开）。 */
+export function sampleAbsence(
+  prev: AbsenceSample,
+  sample: { now: number; idleMs: number },
+  opts: PresenceOptions = {},
+): AbsenceStep {
+  if (presenceOf(sample.idleMs, opts) === 'away') return toAway(prev, sample.now)
+  return toBack(prev, sample.now)
+}
+
+/**
+ * 系统挂起（合盖 / 息屏 / 睡眠）。
+ * 用「收到事件的时间」作为离开起点——挂起后没有下一次 tick 了，
+ * 此刻就是它看到的最后一眼。
+ */
+export function suspendAbsence(prev: AbsenceSample, at: number): AbsenceStep {
+  return toAway(prev, at)
+}
+
+/**
+ * 系统唤醒。
+ * **必须用唤醒时刻反推离开起点**，不能用 now - awaySince：
+ * 睡眠期间 getSystemIdleTime() 已经清零，用它算出来的「离开时长」是假的。
+ */
+export function resumeAbsence(prev: AbsenceSample, at: number): AbsenceStep {
+  return toBack(prev, at)
+}
+
 /** 这次回来是否算「离开很久」 */
 export function isLongAway(awayMs: number): boolean {
   return awayMs >= LONG_AWAY_MS

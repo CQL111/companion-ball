@@ -105,9 +105,16 @@ export function dismiss(id: string): boolean {
   return true
 }
 
-/** 列表（设置面板与图片调试用），按日期升序 */
+/**
+ * 界面列表（设置面板 / 笔记本），按日期升序。
+ *
+ * 只返回还「算数」的条目：dismissed 是用户按了 ×、passed 是事情已经过去，
+ * 它们留在存储里（备份可导出、30 天后由 tickOccasions 清理），但不应再占着列表——
+ * 否则用户划掉了却还能看见，会以为没生效。
+ */
 export function listOccasions(): occ.Occasion[] {
   return getOccasions()
+    .filter((o) => o.status === 'upcoming')
     .slice()
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
 }

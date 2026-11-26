@@ -2,11 +2,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   EMPTY_NOTEBOOK,
+  MARGIN_MAX_CHARS,
   buildDiaryLines,
+  eraseMargin,
   isEmptyDiary,
+  normalizeMargin,
   recentEntries,
   toMarkdown,
   upsertDiary,
+  writeMargin,
   type Notebook,
 } from '@core/notebook'
 import { buildMemoryBlock, buildSystemPrompt, composeSystemPrompt, DEFAULT_PERSONA } from '@core/persona'
@@ -152,5 +156,104 @@ describe('缺席日记不会被模板覆盖（P1）', () => {
   it('缺省来源仍是 template（向后兼容）', () => {
     const nb = upsertDiary(EMPTY_NOTEBOOK, now, ['今天很安静。'])
     expect(nb.entries[0]?.source).toBe('template')
+  })
+})
+
+describe('页边一句话（P2）', () => {
+  const DAY = '2026-11-20'
+
+  it('规范化：折成一行、去首尾空白', () => {
+    expect(normalizeMargin('  今天有点累 \n 但还是想说话  ')).toBe('今天有点累 但还是想说话')
+  })
+
+  it('规范化：空 / 全空白 → null（不留下空句子）', () => {
+    expect(normalizeMargin('')).toBe(null)
+    expect(normalizeMargin('   \n\t  ')).toBe(null)
+  })
+
+  it('规范化：超长截断，不报错', () => {
+    const long = '好'.repeat(MARGIN_MAX_CHARS + 40)
+    expect(normalizeMargin(long)?.length).toBe(MARGIN_MAX_CHARS)
+  })
+
+  it('写在有日记的一页上', () => {
+    let nb = upsertDiary(EMPTY_NOTEBOOK, NOW, ['今天很安静。'])
+    nb = writeMargin(nb, DAY, '其实我今天有点难过', NOW)!
+    expect(nb.entries[0]?.margin?.text).toBe('其实我今天有点难过')
+    // 猫的日记不受影响
+    expect(nb.entries[0]?.lines).toEqual(['今天很安静。'])
+  })
+
+  // 最关键的一条：猫每天都会重算日记，你的话不能被冲掉
+  it('猫重算日记后，页边一句话仍在', () => {
+    let nb = upsertDiary(EMPTY_NOTEBOOK, NOW, ['今天很安静。'])
+    nb = writeMargin(nb, DAY, '我今天有点难过', NOW)!
+    // 同一天日记被重算（模板覆盖）
+    nb = upsertDiary(nb, NOW, ['今天你说了不少话。'], 'template')
+    expect(nb.entries[0]?.lines).toEqual(['今天你说了不少话。'])
+    expect(nb.entries[0]?.margin?.text).toBe('我今天有点难过')
+  })
+
+  it('缺席日记并入模板时，页边一句话仍在', () => {
+    let nb = upsertDiary(EMPTY_NOTEBOOK, NOW, ['你走了很久。'], 'absence')
+    nb = writeMargin(nb, DAY, '我出差去了', NOW)!
+    nb = upsertDiary(nb, NOW, ['今天你说了不少话。'], 'template')
+    expect(nb.entries[0]?.source).toBe('absence')
+    expect(nb.entries[0]?.margin?.text).toBe('我出差去了')
+  })
+
+  // 空白页：猫今天没话说，但用户想留一句——这一页必须存在
+  it('可以在「猫没说话」的空白页上留一句', () => {
+    const nb = writeMargin(EMPTY_NOTEBOOK, DAY, '今天什么都没做', NOW)!
+    expect(nb.entries).toHaveLength(1)
+    expect(nb.entries[0]?.lines).toEqual([])
+    expect(nb.entries[0]?.margin?.text).toBe('今天什么都没做')
+  })
+
+  it('空白页上的话不会被「空白不落盘」的规则吞掉', () => {
+    let nb = writeMargin(EMPTY_NOTEBOOK, DAY, '今天什么都没做', NOW)!
+    // 之后某个流程以空行重算这一页
+    nb = upsertDiary(nb, NOW, [], 'template')
+    expect(nb.entries[0]?.margin?.text).toBe('今天什么都没做')
+  })
+
+  it('一页只有一句：再写会覆盖上一句', () => {
+    let nb = writeMargin(EMPTY_NOTEBOOK, DAY, '第一句', NOW)!
+    nb = writeMargin(nb, DAY, '第二句', NOW)!
+    expect(nb.entries[0]?.margin?.text).toBe('第二句')
+    expect(nb.entries.filter((e) => e.date === DAY)).toHaveLength(1)
+  })
+
+  it('空内容不写（返回 null）', () => {
+    expect(writeMargin(EMPTY_NOTEBOOK, DAY, '   ', NOW)).toBe(null)
+  })
+
+  it('可以在这之前的那一页补一句', () => {
+    let nb = upsertDiary(EMPTY_NOTEBOOK, NOW - 3 * 86400_000, ['三天前。'])
+    const old = nb.entries[0]!.date
+    nb = writeMargin(nb, old, '那天其实是我生日', NOW)!
+    expect(nb.entries[0]?.margin?.text).toBe('那天其实是我生日')
+    // 写下这句的日期是今天，但挂在旧的那一页
+    expect(nb.entries[0]?.date).toBe(old)
+    expect(nb.entries[0]?.margin?.date).toBe('2026-11-20')
+  })
+
+  it('抹掉后彻底消失（不软删除）', () => {
+    let nb = writeMargin(EMPTY_NOTEBOOK, DAY, '说了就后悔', NOW)!
+    nb = eraseMargin(nb, DAY)!
+    expect(nb.entries[0]?.margin).toBe(undefined)
+  })
+
+  it('抹掉没有页边话的一页 → null', () => {
+    const nb = upsertDiary(EMPTY_NOTEBOOK, NOW, ['今天很安静。'])
+    expect(eraseMargin(nb, DAY)).toBe(null)
+  })
+
+  it('导出 Markdown 带上页边一句话', () => {
+    let nb = upsertDiary(EMPTY_NOTEBOOK, NOW, ['今天很安静。'])
+    nb = writeMargin(nb, DAY, '我留了一句', NOW)!
+    const md = toMarkdown(nb)
+    expect(md).toContain('我留了一句')
+    expect(md).toContain('页边')
   })
 })

@@ -63,3 +63,54 @@ describe('parseBackup', () => {
     expect(r.data!.notebook.entries[0]!.lines).toEqual(['ok'])
   })
 })
+
+describe('页边一句话的备份往返（P2）', () => {
+  const withMargin: Notebook = {
+    version: 1,
+    entries: [
+      {
+        date: '2026-11-20',
+        createdAt: '2026-11-20T12:00:00.000Z',
+        lines: ['今天很安静。'],
+        source: 'absence',
+        margin: { date: '2026-11-20', text: '我今天有点难过', createdAt: '2026-11-20T23:00:00.000Z' },
+      },
+      // 只有页边话、猫没说话的一页
+      {
+        date: '2026-11-21',
+        createdAt: '2026-11-21T12:00:00.000Z',
+        lines: [],
+        source: 'template',
+        margin: { date: '2026-11-21', text: '今天什么都没做', createdAt: '2026-11-21T22:00:00.000Z' },
+      },
+    ],
+  }
+
+  it('导出包含页边一句话', () => {
+    const b = exportBackup({ petName: '', memories, notebook: withMargin })
+    expect(b.notebook.entries[0]?.margin?.text).toBe('我今天有点难过')
+  })
+
+  it('导入后页边一句话还在（换电脑不会把话弄丢）', () => {
+    const raw = JSON.stringify(exportBackup({ petName: '', memories, notebook: withMargin }))
+    const r = parseBackup(raw)
+    expect(r.ok).toBe(true)
+    const e = r.data!.notebook.entries
+    expect(e.find((x) => x.date === '2026-11-20')?.margin?.text).toBe('我今天有点难过')
+    expect(e.find((x) => x.date === '2026-11-21')?.margin?.text).toBe('今天什么都没做')
+  })
+
+  it('导入保留 source=absence（否则缺席日记会被模板覆盖）', () => {
+    const raw = JSON.stringify(exportBackup({ petName: '', memories, notebook: withMargin }))
+    const r = parseBackup(raw)
+    expect(r.data!.notebook.entries.find((x) => x.date === '2026-11-20')?.source).toBe('absence')
+  })
+
+  it('只有页边话的空白页不会被导入丢掉', () => {
+    const raw = JSON.stringify(exportBackup({ petName: '', memories, notebook: withMargin }))
+    const r = parseBackup(raw)
+    const only = r.data!.notebook.entries.find((x) => x.date === '2026-11-21')
+    expect(only).toBeTruthy()
+    expect(only?.lines).toEqual([])
+  })
+})

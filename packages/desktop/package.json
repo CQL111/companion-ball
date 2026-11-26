@@ -1,6 +1,6 @@
 {
   "name": "@companion/desktop",
-  "version": "0.9.7",
+  "version": "0.9.9",
   "private": true,
   "description": "桌面陪伴 · 团子猫：常驻桌角的 AI 团子猫，可聊天、可拖拽",
   "main": "./out/main/index.js",
@@ -8,7 +8,7 @@
     "dev": "npm run build:legal && electron-vite dev",
     "start": "electron-vite preview",
     "start:hidden": "electron-vite preview -- --hidden",
-    "test": "vitest run && node ../../scripts/check-core-boundary.js && node ../../scripts/check-docs.js",
+    "test": "vitest run && node ../../scripts/check-core-boundary.js && node ../../scripts/check-docs.js && node ../../scripts/check-secrets.js && node ../../scripts/check-margin-privacy.js",
     "test:e2e": "node tests/e2e/smoke.mjs",
     "test:watch": "vitest",
     "test:all": "npm test && npm run build && npm run test:e2e",
@@ -30,7 +30,7 @@
     "build:skin": "node scripts/build-skin.mjs",
     "pack:skin": "node scripts/pack-skin.mjs",
     "build:e2e": "npm run build:legal && node scripts/build-e2e.mjs",
-    "test:e2e:all": "node tests/e2e/needmotion.mjs && node tests/e2e/absence.mjs && node tests/e2e/occasions.mjs"
+    "test:e2e:all": "node tests/e2e/needmotion.mjs && node tests/e2e/absence.mjs && node tests/e2e/occasions.mjs && node tests/e2e/dailylog.mjs && node tests/e2e/return.mjs && node tests/e2e/remember-ui.mjs && node tests/e2e/margin.mjs"
   },
   "keywords": [
     "electron",

@@ -1,6 +1,7 @@
 // tests/speech.test.ts - 「它为什么开口」单测
 import { describe, expect, it } from 'vitest'
 import {
+  RETURN_GREET_MIN_MS,
   bucketFor,
   chooseObservation,
   composeSpeech,
@@ -27,6 +28,19 @@ function ctx(patch: Partial<SpeakContext> = {}): SpeakContext {
 describe('观察优先级', () => {
   it('用户回来优先于其他一切', () => {
     const obs = chooseObservation(ctx({ justReturned: true, awayMinutes: 45, sittingMinutes: 90, pendingNeed: 'hungry' }))
+    expect(obs.kind).toBe('user-back')
+  })
+
+  // 回归：短离开不该触发「回来」台词。否则 Win+L 一秒钟回来，
+  // 它也会说一句「你回来了」——回来就从惊喜变成噪音。
+  it('离开不到半小时回来 → 不说「回来」', () => {
+    const obs = chooseObservation(ctx({ justReturned: true, awayMinutes: 10 }))
+    expect(obs.kind).not.toBe('user-back')
+  })
+
+  it('刚好半小时回来 → 说「回来」', () => {
+    expect(RETURN_GREET_MIN_MS).toBe(30 * 60 * 1000)
+    const obs = chooseObservation(ctx({ justReturned: true, awayMinutes: 30 }))
     expect(obs.kind).toBe('user-back')
   })
 

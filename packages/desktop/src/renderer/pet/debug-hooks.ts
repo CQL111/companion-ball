@@ -14,9 +14,12 @@ export interface DebugHost {
   speak(kind: 'need' | 'sit' | 'back' | 'idle'): void
   /** 强制睡眠（验证「睡觉时不表达需求」） */
   sleep(on: boolean): string
+  /** 走真实的「用户回来」路径：等于收到 presence-back */
+  returnBack(awayMs: number): void
 }
 
 export function installDebugHooks(host: DebugHost): void {
   ;(window as unknown as { debugSpeak?: DebugHost['speak'] }).debugSpeak = (kind) => host.speak(kind)
   ;(window as unknown as { debugSleep?: DebugHost['sleep'] }).debugSleep = (on) => host.sleep(on)
+  ;(window as unknown as { debugReturn?: DebugHost['returnBack'] }).debugReturn = (ms) => host.returnBack(ms)
 }

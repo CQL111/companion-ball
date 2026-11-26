@@ -24,6 +24,10 @@ const api: CompanionApi = {
   openNotebook: () => ipcRenderer.invoke(CH.openNotebook),
   getNotebookView: () => ipcRenderer.invoke(CH.getNotebookView),
   exportNotebookMarkdown: () => ipcRenderer.invoke(CH.exportNotebookMarkdown),
+  notebookMarkdownPreview: () => ipcRenderer.invoke(CH.notebookMarkdownPreview),
+  // 页边一句话（P2）：没有回复通道，只有写与抹
+  writeNotebookMargin: (payload) => ipcRenderer.invoke(CH.writeNotebookMargin, payload),
+  eraseNotebookMargin: (date) => ipcRenderer.invoke(CH.eraseNotebookMargin, date),
   getMemories: () => ipcRenderer.invoke(CH.getMemories),
   deleteMemory: (id) => ipcRenderer.invoke(CH.deleteMemory, id),
   clearMemories: () => ipcRenderer.invoke(CH.clearMemories),

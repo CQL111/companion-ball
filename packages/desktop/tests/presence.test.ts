@@ -10,7 +10,10 @@ import {
   pickSitLine,
   presenceOf,
   reduceSit,
+  resumeAbsence,
+  sampleAbsence,
   sitCheck,
+  suspendAbsence,
 } from '@core/presence'
 
 const MIN = 60 * 1000
@@ -104,5 +107,56 @@ describe('提醒文案', () => {
       expect(line).not.toMatch(/必须|应该|错误|警告/)
       expect(line.length).toBeLessThanOrEqual(30)
     }
+  })
+})
+
+describe('离开 / 回来的转移（S4 修复）', () => {
+  const active = { active: true, awaySince: 0 }
+  const away = (since: number) => ({ active: false, awaySince: since })
+
+  it('空闲超时 → 离开，记下起点', () => {
+    const r = sampleAbsence(active, { now: T0, idleMs: AWAY_AFTER_MS })
+    expect(r.next.active).toBe(false)
+    expect(r.next.awaySince).toBe(T0)
+    expect(r.event).toEqual({ type: 'away', awayStart: T0 })
+  })
+
+  it('空闲阈值内 → 不离开', () => {
+    expect(sampleAbsence(active, { now: T0, idleMs: AWAY_AFTER_MS - 1 }).event).toBe(null)
+  })
+
+  it('已经在离开中 → 不重复发 away', () => {
+    const r = sampleAbsence(away(T0 - 600_000), { now: T0, idleMs: AWAY_AFTER_MS })
+    expect(r.event).toBe(null)
+  })
+
+  it('回到活跃 → 发 back，离开时长按起点算', () => {
+    const start = T0 - 3 * 60 * MIN
+    const r = sampleAbsence(away(start), { now: T0, idleMs: 0 })
+    expect(r.next.active).toBe(true)
+    expect(r.event).toEqual({ type: 'back', awayStart: start, awayMs: T0 - start })
+  })
+
+  it('本来就在活跃 → 不发 back（避免每轮轮询都唤醒一次）', () => {
+    expect(sampleAbsence(active, { now: T0, idleMs: 0 }).event).toBe(null)
+  })
+
+  it('系统挂起：用挂起时刻作为离开起点', () => {
+    const r = suspendAbsence(active, T0)
+    expect(r.next.active).toBe(false)
+    expect(r.next.awaySince).toBe(T0)
+  })
+
+  // 这是真实故障：合盖睡眠 3 小时后醒来，getSystemIdleTime() 从 0 重计。
+  // 若用「醒来时刻 - 离开起点」以外的办法，离开时长会被算成几十秒。
+  it('系统唤醒：离开时长 = 唤醒时刻 - 挂起时刻，不受空闲秒数影响', () => {
+    const slept = suspendAbsence(active, T0)
+    const woke = resumeAbsence(slept.next, T0 + 3 * 60 * MIN)
+    expect(woke.event).toEqual({ type: 'back', awayStart: T0, awayMs: 3 * 60 * MIN })
+    expect(woke.next.active).toBe(true)
+  })
+
+  it('唤醒但本来没睡（事件重放）→ 不发 back', () => {
+    expect(resumeAbsence(active, T0).event).toBe(null)
   })
 })

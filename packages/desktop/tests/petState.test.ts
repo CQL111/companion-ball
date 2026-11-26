@@ -137,6 +137,43 @@ describe('唤醒与拖动', () => {
   })
 })
 
+describe('离开 / 回来（S4 修复）', () => {
+  it('离开时猫自己待着，不主动出声', () => {
+    const r = reducePetState(fresh(T0), { type: 'away', now: T0, awayMs: 0 })
+    expect(r.state.mood).toBe('doze')
+    expect(r.trigger).toBeUndefined()
+  })
+
+  it('离开很久再回来 → sulk，并触发 return 台词', () => {
+    const r = reducePetState(fresh(T0), { type: 'returned', now: T0, awayMs: 3 * 60 * MIN })
+    expect(r.state.mood).toBe('sulk')
+    expect(r.trigger).toBe('return')
+  })
+
+  it('短时间回来 → curious，也触发 return 台词', () => {
+    const r = reducePetState(fresh(T0), { type: 'returned', now: T0, awayMs: 5 * MIN })
+    expect(r.state.mood).toBe('curious')
+    expect(r.trigger).toBe('return')
+  })
+
+  // 回归：睡眠 3 小时回来，lastInteractAt 若停在旧值，
+  // 下一秒 tick 的 idleMood 看到「60 分钟没交互」会判 sleep，
+  // sulk 连一秒都撑不到——用户看到的不是「闷」，而是直接又睡着了。
+  it('长时间回来后的下一 tick 不会立刻睡着', () => {
+    const back = reducePetState(fresh(T0), { type: 'returned', now: T0, awayMs: 3 * 60 * MIN })
+    expect(back.state.mood).toBe('sulk')
+    const next = reducePetState(back.state, { type: 'tick', now: T0 + 1000 })
+    expect(next.state.mood).toBe('sulk')
+  })
+
+  // 短离开不碰 lastInteractAt：它本来就该按真实空闲继续走。
+  it('短时间回来保留真实空闲（不会被伪造为刚交互）', () => {
+    const base = fresh(T0)
+    const r = reducePetState(base, { type: 'returned', now: T0 + 5 * MIN, awayMs: 5 * MIN })
+    expect(r.state.lastInteractAt).toBe(base.lastInteractAt)
+  })
+})
+
 describe('持久化', () => {
   it('只持久化 lastInteractAt 与 lastGreetDate', () => {
     const s = reducePetState(fresh(NINE_AM), { type: 'click', now: NINE_AM }).state

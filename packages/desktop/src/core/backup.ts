@@ -93,12 +93,29 @@ export function parseBackup(raw: string): ParseResult {
   const notebook: Notebook = { version: 1, entries: [] }
   if (isObject(obj.notebook) && Array.isArray(obj.notebook.entries)) {
     for (const e of obj.notebook.entries) {
-      if (!isObject(e) || typeof e.date !== 'string' || !Array.isArray(e.lines)) continue
+      if (!isObject(e) || typeof e.date !== 'string') continue // 有页边话的一页可能没有 lines
+      const date = e.date.slice(0, 10)
+      const lines = Array.isArray(e.lines) ? e.lines.filter((l): l is string => typeof l === 'string').slice(0, 4) : []
+
+      // 页边一句话：用户自己写的，导入必须保住（否则「换电脑」= 话没了）
+      let margin: Notebook['entries'][number]['margin']
+      if (isObject(e.margin) && typeof e.margin.text === 'string' && e.margin.text.trim()) {
+        margin = {
+          date: typeof e.margin.date === 'string' ? e.margin.date.slice(0, 10) : date,
+          text: e.margin.text.slice(0, 60),
+          createdAt: typeof e.margin.createdAt === 'string' ? e.margin.createdAt : new Date(0).toISOString(),
+        }
+      }
+
+      // 只有真正的内容才是一页；两边都空就跳过（保持「允许空白」）
+      if (!lines.length && !margin) continue
       notebook.entries.push({
-        date: e.date.slice(0, 10),
+        date,
         createdAt: typeof e.createdAt === 'string' ? e.createdAt : new Date(0).toISOString(),
-        lines: e.lines.filter((l): l is string => typeof l === 'string').slice(0, 4),
-        source: 'template',
+        lines,
+        // 保留缺席标记：丢成 template 后，导入的缺席日记会被当天模板覆盖掉
+        source: e.source === 'absence' ? 'absence' : 'template',
+        ...(margin ? { margin } : {}),
       })
     }
     notebook.entries.sort((a, b) => (a.date < b.date ? 1 : -1))

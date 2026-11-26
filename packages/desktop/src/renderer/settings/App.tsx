@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { BottleStatusView, LlmStatus, LocalModelsResult, MemoryListResult, OnlineAiConfigView } from '../../shared/types'
+import type {
+  BottleStatusView,
+  DailyNotesView,
+  LlmStatus,
+  LocalModelsResult,
+  MemoryListResult,
+  OccasionsView,
+  OnlineAiConfigView,
+} from '../../shared/types'
 
 type StatusType = '' | 'ok' | 'err' | 'info'
 interface StatusMsg {
@@ -13,6 +21,28 @@ const LEGAL_DOCS = [
   { key: 'disclaimer', label: '免责声明' },
   { key: 'thirdparty', label: '第三方许可' },
 ] as const
+
+/** 2026-12-03 → 12 月 3 日（周三） */
+function formatOccasionDate(date: string): string {
+  const [y, m, d] = date.split('-')
+  if (!m || !d) return date
+  const dt = new Date(`${date}T12:00:00`)
+  const wd = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dt.getDay()] || ''
+  const thisYear = String(new Date().getFullYear()) === y
+  return `${thisYear ? '' : `${y} 年 `}${Number(m)} 月 ${Number(d)} 日 ${wd}`.trim()
+}
+
+/** 今天的记事用「今天 / 昨天」，再早给日期 */
+function formatDay(day: string): string {
+  const now = new Date()
+  const key = (dt: Date): string =>
+    `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+  if (day === key(now)) return '今天'
+  const y = new Date(now)
+  y.setDate(y.getDate() - 1)
+  if (day === key(y)) return '昨天'
+  return formatOccasionDate(day)
+}
 
 export default function App(): React.ReactElement {
   const [llm, setLlm] = useState<LlmStatus | null>(null)
@@ -39,6 +69,10 @@ export default function App(): React.ReactElement {
   const [nameSaved, setNameSaved] = useState('')
   const [mem, setMem] = useState<MemoryListResult | null>(null)
   const [memStatus, setMemStatus] = useState('')
+  // 「它记得的事」：有日期的（P1.5）与今天的（M7）。
+  // 之前只能通过调试接口看到，用户说了「下周三面试」却无处确认、无处删除。
+  const [occ, setOcc] = useState<OccasionsView | null>(null)
+  const [days, setDays] = useState<DailyNotesView>({ days: [] })
   const [bottle, setBottle] = useState<BottleStatusView | null>(null)
   const [bottleEndpoint, setBottleEndpoint] = useState('')
   const [animHint, setAnimHint] = useState('')
@@ -124,6 +158,16 @@ export default function App(): React.ReactElement {
         setMem(await window.api.getMemories())
       } catch {
         /* 忽略：记忆不可用时隐藏列表 */
+      }
+      try {
+        setOcc(await window.api.occasionsList())
+      } catch {
+        /* 忽略：事件记忆不可用时隐藏 */
+      }
+      try {
+        setDays(await window.api.dailyNotesList())
+      } catch {
+        /* 忽略：日常记事不可用时隐藏 */
       }
       await refreshLlmStatus()
       await loadOnline()
@@ -301,6 +345,21 @@ export default function App(): React.ReactElement {
     } catch (e) {
       setNameSaved('保存失败：' + ((e as Error).message || e))
     }
+  }
+
+  // ---------- 事件记忆 / 日常记事 ----------
+  const dismissOccasion = async (id: string): Promise<void> => {
+    if (!(await window.api.occasionsDismiss(id))) return
+    setOcc(await window.api.occasionsList())
+  }
+
+  const toggleOccasions = async (enabled: boolean): Promise<void> => {
+    setOcc(await window.api.occasionsSetEnabled(enabled))
+  }
+
+  const removeNote = async (id: string): Promise<void> => {
+    if (!(await window.api.dailyNoteRemove(id))) return
+    setDays(await window.api.dailyNotesList())
   }
 
   // ---------- 记忆 ----------
@@ -502,6 +561,68 @@ export default function App(): React.ReactElement {
               全部忘记
             </button>
           </div>
+        )}
+      </section>
+
+      <section className="section">
+        <h2>它记得的事</h2>
+        <p className="hint">
+          你说过的、带日期的事。它会在前一天提一句，当天用动作陪你，过后问一句结果。
+          不想要的可以划掉，它不会再提。
+          {occ ? `（${occ.occasions.length}/${occ.max}）` : ''}
+        </p>
+        <label className="switch-row">
+          <input
+            type="checkbox"
+            checked={occ?.enabled !== false}
+            onChange={(e) => void toggleOccasions(e.target.checked)}
+          />
+          <span className="switch-track"><i /></span>
+          <span className="switch-label">记住带日期的事</span>
+        </label>
+
+        {occ && occ.occasions.length > 0 ? (
+          <ul className="mem-list">
+            {occ.occasions.map((o) => (
+              <li key={o.id} className="mem-item">
+                <span className="mem-when">{formatOccasionDate(o.date)}</span>
+                <span className="mem-text">{o.text}</span>
+                <button className="mem-del" onClick={() => void dismissOccasion(o.id)} title="划掉，不再提">
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="hint">还没有。试着跟它说一句「下周三我要面试」。</p>
+        )}
+      </section>
+
+      <section className="section">
+        <h2>今天记下的</h2>
+        <p className="hint">
+          你说过的带数量的事（花了多少、喝了多少）。晚上它会复述一次，
+          不替你算总额、不评价。只留最近几天。
+        </p>
+
+        {days.days.length > 0 ? (
+          days.days.map((d) => (
+            <div key={d.day} className="daily-day">
+              <div className="daily-day-title">{formatDay(d.day)}</div>
+              <ul className="mem-list">
+                {d.notes.map((n) => (
+                  <li key={n.id} className="mem-item">
+                    <span className="mem-text">{n.text}</span>
+                    <button className="mem-del" onClick={() => void removeNote(n.id)} title="删掉这条">
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        ) : (
+          <p className="hint">还没有。试着跟它说一句「今天花了10块」。</p>
         )}
       </section>
 
