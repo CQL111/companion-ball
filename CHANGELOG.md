@@ -42,6 +42,14 @@
   且只允许 `findByIdForReport` 等白名单调用
 - **已验证能真实拦截**：造了一个 `SELECT * FROM bottles` 的探针，门禁拒绝并指出位置
 
+### 本地运行
+- **`npm run dev:platform`**：一条命令构建前台 + 后台 + 服务端并起服务（8080）
+- 首次运行自动创建管理员，只打印一次 Key 与 TOTP 密钥
+- `npm run dev:platform:watch` 监听页面变更自动重建
+- `npm run db:reset` 重置本地开发库（检测占用，给出清晰提示）
+- 清理坏命令：`server dev` 原为 `wrangler dev`（需 Cloudflare 登录）、`db:init` 引用已删除的 schema.sql、`web preview` 引用不存在的脚本
+- 详见 [`docs/LOCAL-DEV.md`](docs/LOCAL-DEV.md)
+
 ### 验证
 | 项 | 结果 |
 |---|---|
