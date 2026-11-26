@@ -6,8 +6,8 @@
 
 ## 一、这是什么
 
-**桌面陪伴 · 团子猫** —— Windows 桌面 Electron 陪伴角色，当前 0.9.0（P0 已完成，
-下一步 P0.5「不说话的身体」；产品方向以 [`docs/PRODUCT-THESIS.md`](docs/PRODUCT-THESIS.md) 为准）。
+**桌面陪伴 · 团子猫** —— Windows 桌面 Electron 陪伴角色，当前 0.9.9（私人闭环 P1 → P1.5 → P2 已全通；
+产品方向以 [`docs/PRODUCT-THESIS.md`](docs/PRODUCT-THESIS.md) 为准）。
 
 - 80×80 内联 SVG 团子猫常驻桌角：可拖拽、位置记忆、贴边自动翻转菜单
 - 7 种情绪（醒着 / 开心 / 好奇 / 打盹 / 睡着 / 不耐烦 / 眩晕）+ 98 条台词 + 3 秒自动消失的气泡
@@ -149,9 +149,18 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
   `packages/{contracts,server,web,admin}`；网页只读橱窗、新闻官方编辑、后台 API Key + TOTP
 - ✅ **平台 S0 完成（2026-11-25）**：workspaces + `packages/contracts` 唯一契约源（`mailbox.ts` 改为
   re-export，`server/src/rules.ts` 副本删除）+ `server/` 迁入 `packages/server`；231 单测 / 17 e2e
-- **下一步：部署 S3（0.9.1）**——在 `packages/server` 建 D1 + 填默认地址 + 邀请制冷启动
-- 产品侧下一步：P0.5「不说话的身体」——`core/needs` 需求态 → `core/motion` 动作映射（不新增台词）
-- 之后：P1 缺席日志（`core/absence.ts`）→ P1.5 事件记忆（`core/occasions.ts`，规格见 OCCASIONS.md）
+- ✅ **P0.5「不说话的身体」（0.9.4）**：`core/needMotion` 需求 → 动作计划；252 单测 + 真机 6/6
+- ✅ **P1「你不在的时候」（0.9.5）**：`core/absence` 缺席日志，确定性 / 允许空白 / 不说数字；270 单测 + 真机 9/9
+- ✅ **P1.5「它记得那一天」（0.9.6）**：`core/occasions` 事件记忆，T-1 / 当天 / T+1；299 单测 + 真机 14/14
+- ✅ **M7「日常记事」（0.9.9）**：`core/dailyLog` 零 token 抽取 + 晚间复述一次，不维护总额
+- ✅ **S4 修补「回来时认出你」（0.9.9）**：`core/presence` 统一离开/回来转移 + suspend/resume；
+  离开时长不再被睡眠归零算错；`RETURN_GREET_MIN_MS` 让「回来」有门槛
+- ✅ **P2「页边一句话」（0.9.9）**：`DiaryEntry.margin` 与日记隔离（猫重算不冲掉用户的话）；
+  允许不回；`scripts/check-margin-privacy.js` 守住「不出网」
+- ✅ **记忆界面可见（0.9.9）**：设置里能看/能删「它记得的事」「今天记下的」
+- ✅ **工程门禁（0.9.9）**：`check-secrets.js`（密钥）+ `check-margin-privacy.js`（页边不出网）进 `npm test`
+- **下一步：部署 S3**——在 `packages/server` 建 D1 / VPS + 填默认地址 + 邀请制冷启动
+- 产品侧下一步：按闸门验证 P2 的真实使用数据（打开者周留一句 ≥30%），再决定 S5 猫邮局
 - 技术债清单与技术交付清单见 `docs/ARCHITECTURE.md` 第十二节
 
 ## 八、文档地图
