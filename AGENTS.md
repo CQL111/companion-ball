@@ -150,6 +150,8 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 - ✅ **窗口与灯塔设计（2026-11-26）**：新增 [`docs/WINDOW.md`](docs/WINDOW.md)——
   漂流瓶主页「不是社区」的判据（无互动、无账号、无独立 URL）、静读模式、三层冷启动；
   后台隐私边界（**管理员看不到私池**，写成代码约束）、值班队列、封海开关
+- ✅ **平台施工图（2026-11-26）**：新增 [`docs/BUILD-PLATFORM.md`](docs/BUILD-PLATFORM.md)——
+  同源单 Worker（boringtime.cn）、D1/Node 共用迁移、repo/ 收口 SQL、服务端集成测试骨架、CI 路径过滤
 - ✅ **平台 S0 完成（2026-11-25）**：workspaces + `packages/contracts` 唯一契约源（`mailbox.ts` 改为
   re-export，`server/src/rules.ts` 副本删除）+ `server/` 迁入 `packages/server`；231 单测 / 17 e2e
 - ✅ **P0.5「不说话的身体」（0.9.4）**：`core/needMotion` 需求 → 动作计划；252 单测 + 真机 6/6
@@ -176,6 +178,7 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 | `docs/OCCASIONS.md` | P1.5 事件记忆规格：数据模型、抽取、隐式确认、接住节奏、验收 | 工程 |
 | `docs/PLATFORM.md` | 平台架构：网页橱窗 / 新闻管道 / 管理后台 / monorepo / 资源评估 | 产品 / 工程 |
 | `docs/WINDOW.md` | **窗口与灯塔**：漂流瓶主页 + 运营后台产品设计；「不是社区」的判据与红线 | 产品 |
+| `docs/BUILD-PLATFORM.md` | **平台施工图**：同源单 Worker、迁移、模块拆分、测试、CI、上线清单 | 工程 |
 | `docs/PLATFORM-S0.md` | 平台 S0 执行清单：workspaces、契约收敛、server 迁入、守卫适配、发布渠道、CI | 工程 |
 | `docs/REPO-LAYOUT.md` | 仓库设计图：目录结构、依赖方向、守卫、命令 | 工程 |
 | `docs/ARCHITECTURE.md` | 技术栈、分层、进程、数据流、IPC、存储、安全、构建、手机端 | 工程 |

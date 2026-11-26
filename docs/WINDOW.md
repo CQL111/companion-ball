@@ -4,7 +4,7 @@
 > **一句话**：前台是**窗口**——站在屋里看海；后台是**灯塔**——有人值班，保证海上不出事。
 > 两者都不是社区。这份文档设计的是「不像社区的社区产品」，以及它背后那间必须有人守着的值班室。
 >
-> 基础设施（Workers / D1 / R2 / Pages、费用、monorepo）见 [`PLATFORM.md`](PLATFORM.md)；
+> 基础设施（Workers / D1 / R2、域名 boringtime.cn、费用、monorepo）见 [`PLATFORM.md`](PLATFORM.md)；
 > 私池规则见 [`SERVER.md`](SERVER.md)；为什么社交要排在私人闭环之后见 [`PRODUCT-THESIS.md`](PRODUCT-THESIS.md)。
 
 ---
@@ -655,7 +655,7 @@ POST   /admin/admins/:id/reset-key
 | 用户规模 | 小 | 大 |
 
 **执行方式**：
-- 公开站（`/gallery`、`/news`、下载页）部署在 Cloudflare Pages，`*.pages.dev` + 自有海外域名
+- 公开站（`/gallery`、`/news`、下载页）与 API 同源：`boringtime.cn`（单 Worker，见 PLATFORM 第三节同源部署）
 - 桌面客户端不区分地区；只是服务端默认地址指向海外实例
 - **国内可访问性**：`workers.dev` 在国内不可达（已踩过），面向国内的服务器按
   [`VPS-DEPLOY.md`](VPS-DEPLOY.md) 自建。**但公开站先只开海外**——国内用户此刻可以用桌面端
@@ -668,7 +668,7 @@ POST   /admin/admins/:id/reset-key
 
 若将来要在国内开公开站但资质未就绪：
 
-- Cloudflare Access（或 Pages 的简单 `Basic Auth` 环境变量）守住 `/gallery` 与 `/news`
+- Worker 侧一个简单的口令校验（环境变量存的哈希）守住 `/gallery` 与 `/news`
 - 只有拿到口令的用户能看；口令通过桌面端「领取」或邀请名单发放
 - 公开站**零 SEO**（既然要口令，也顺手全站 `noindex`）
 - 优点：内容仍然被真实用户消费，产品假设仍可验证；缺点：没有自然流量
@@ -762,7 +762,7 @@ S5 猫邮局（邀请制）→ S6 开门
 
 | # | 决策 | 影响 |
 |---|---|---|
-| 1 | **公开站先做海外** | 部署 Cloudflare Pages + 海外域名；不办 ICP；国内用户先用桌面端私人闭环 |
+| 1 | **公开站先做海外** | `boringtime.cn` + Cloudflare（单 Worker，同源）；不办 ICP；国内用户先用桌面端私人闭环 |
 | 2 | **官方种子不标记、后台可查** | 前台不做区分标记（保住「海」的幻觉）；`gallery_bottles.seed=1` 后台可见；上限为真实内容 50% |
 | 3 | **新闻线索由独立爬虫系统提供** | 本仓库只定义线索契约（第五节）；爬虫不进 monorepo；**没有任何自动发布路径** |
 

@@ -396,7 +396,7 @@ npm run release:patch    # 升版本（packages/desktop）→ tag → push → �
 - `resources/`（图标、托盘图）通过 `buildResources` 与 `extraResources` 进入安装包。
 - `build:legal`：仓库根 `docs/legal/*.md` → `packages/desktop/src/legal-data.js`（生成物，勿手改；已入库，
   让 `npm start` 在未构建时也能用）。
-- `build:site`：`packages/web/product-intro.html` → `docs/index.html`（Pages 源为 master `/docs`）。
+- `build:site`：`packages/web/public/` → `packages/web/dist/`（产物拷进 Worker `assets`，与 API 同源部署）。
 - `bundled-ai.json` 生成在 `packages/desktop/`（已 gitignore），由 `electron-builder.key.yml` 复制进安装包。
 
 ## 十一、测试
@@ -473,7 +473,7 @@ tests/petState.test.ts    状态机单测
         ▼           ▼        ▼         ▼              ▼
 ┌───────────┐ ┌──────────┐ ┌──────┐ ┌──────────┐ ┌─────────────┐
 │ desktop   │ │ server   │ │ web  │ │ admin    │ │ crawler     │
-│ Electron  │ │ 瓶子/橱窗 │ │Astro │ │Vite+React│ │ （独立仓库）  │
+│ Electron  │ │ 瓶子/橱窗 │ │静态页 │ │Vite+React│ │ （独立仓库）  │
 │           │ │ /新闻 API │ │ 橱窗 │ │ 19       │ │ 只推送线索    │
 └───────────┘ └──────────┘ └──────┘ └──────────┘ └─────────────┘
      │             ▲          │          │             │
@@ -487,8 +487,8 @@ tests/petState.test.ts    状态机单测
 |---|---|---|---|
 | `desktop` | Electron | 安装包（R2 分发） | `X-Device-Token`（installId 派生） |
 | `server` | Workers **或** Node 22（同一份 handler） | Cloudflare / VPS | 设备令牌 + admin 会话 |
-| `web` | Astro 静态 + Pages Functions | Cloudflare Pages | 无（只读） |
-| `admin` | Vite SPA | Cloudflare Pages | API Key + TOTP 会话 |
+| `web` | 静态 HTML（/news 由 Worker 渲染） | 同一 Worker 的 `assets` | 无（只读） |
+| `admin` | Vite SPA | 同一 Worker 的 `assets` | API Key + TOTP 会话 |
 | `crawler` | **不在本仓库** | 独立进程/容器 | `NEWS_INGEST_TOKEN` |
 
 ### 15.2 依赖规则（新增一条硬约束）
@@ -500,7 +500,7 @@ contracts ←── desktop / server / web / admin
 
 - `desktop` **不 import** `server` / `web` / `admin` 的任何代码
 - `web` 与 `admin` **不直接连数据库**——一切写操作走 `server` 的 HTTP 接口
-- `server` 是唯一持有 D1/KV 凭证的单元；`web` / `admin` 的 Pages Functions 只做代理与静态托管
+- `server` 是唯一持有 D1/KV 凭证的单元；`web` / `admin` 只是静态资源（放在 Worker 的 `assets` 里），不参与运行时
 - **crawler 只认 contracts 里的 `NewsLeadPush`**，不 import server 实现
 
 > 为什么新增这条：monorepo 里最容易发生的腐化是「前端顺手引后端一个函数」，
@@ -533,7 +533,7 @@ pet.ts → preload → main/mail.ts → services/bottleApi.ts
 
 **网页看橱窗（只读，无令牌）**：
 ```
-Astro 静态页 →（构建期）预取 /v1/gallery 或（运行期）fetch
+静态页 →（构建期）预取 /v1/gallery 或（运行期）fetch
              → handler.ts → gallery_bottles（独立表，不碰 bottles）
 ```
 
@@ -556,9 +556,9 @@ crawler → POST /v1/internal/news/leads  (NEWS_INGEST_TOKEN)
 | 改了哪里 | 触发什么 | 部署到 |
 |---|---|---|
 | `packages/desktop/**` | 桌面构建 + e2e | R2（安装包） |
-| `packages/server/**` | typecheck + 单测 | `wrangler deploy` 或 VPS |
-| `packages/web/**` | Astro build | Cloudflare Pages |
-| `packages/admin/**` | Vite build | Cloudflare Pages |
+| `packages/server/**` | typecheck + 单测 | `wrangler deploy`（boringtime.cn）或 VPS |
+| `packages/web/**` | 静态构建 → 拷进 Worker assets | 随 Worker 一起部署 |
+| `packages/admin/**` | Vite build → 拷进 Worker assets | 随 Worker 一起部署 |
 | `packages/contracts/**` | **全部**（契约变更三端同步） | — |
 | `docs/**` | 只跑门禁（`check-docs` / `check-secrets`） | — |
 

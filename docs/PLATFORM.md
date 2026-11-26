@@ -11,7 +11,7 @@
 | D1 | 网页版漂流瓶能不能写 | **只读橱窗，不能写** | 网页没有设备令牌与限流基线，匿名写必然被刷；写始终留在桌面客户端 |
 | D2 | 新闻从哪来 | **官方编辑部 + 人工发布**；RSS 只作为后台选题来源 | 直连 RSS = 版权、质量、不可控三连；新闻要进「猫的笔记本」，必须可控 |
 | D3 | 管理后台怎么登录 | **API Key + TOTP**，邀请制、无公开注册；不存明文密码、不上 Workers Paid | 只调用 WebCrypto 标准原语（SHA-256 / HMAC / AES-GCM），不发明算法；免费档 CPU 足够 |
-| D4 | 仓库结构 | **单仓库 monorepo（私有）**：根包 = 桌面端，`packages/{contracts,server,web,admin}` | 一次 PR 三端同步、无私有 registry；代价是发布渠道需改走 R2/Pages，且不能选择性开源 |
+| D4 | 仓库结构 | **单仓库 monorepo（私有）**：根包 = 桌面端，`packages/{contracts,server,web,admin}` | 一次 PR 三端同步、无私有 registry；代价是发布渠道需改走 R2 + 自有域名，且不能选择性开源 |
 
 > 一句话形态：**一份契约，两份内容池，三个入口**——桌面端**写**，网页端**看**，后台**管**。
 > 契约（`packages/contracts`，见第九节）现在还不存在，是平台 S0 的第一步；它要消灭的正是
@@ -30,7 +30,7 @@
            │  写                  │  只读                │  只读
            │                      │                      │
 ┌──────────▼─────────┐  ┌─────────▼─────────┐  ┌─────────▼──────────┐
-│ 桌面客户端          │  │ 猫邮局 Web（Astro） │  │ 管理后台            │
+│ 桌面客户端          │  │ 猫邮局 Web（静态页） │  │ 管理后台            │
 │ Electron           │  │ 橱窗 / 新闻 / 下载  │  │ 审核 / 编排 / 开关  │
 │ 写瓶 / 捡瓶 /       │  │ / 法务页            │  │ / 指标 / 审计       │
 │ 新闻进笔记本        │  │ 无账号、无 Cookie   │  │ 自建账号 + TOTP     │
@@ -56,13 +56,46 @@
 
 | 组件 | 职责 | 部署 |
 |---|---|---|
-| **API Worker** | 公开接口 `/v1/*`：扔 / 捡 / 回 / 收 / 举报 / 橱窗 / 新闻 / meta | Cloudflare Workers |
-| **Admin API** | `/admin/*`：自建登录（密码 + TOTP）、审核、举报处置、新闻编排、开关、指标、审计 | 同 Worker，独立路由组；会话 Cookie（HttpOnly） |
-| **Cron Worker** | 沉海、橱窗过期、举报归档、日统计汇总 | Workers Cron Triggers |
-| **D1** | 结构化数据：bottles / replies / picks / reports / news / devices / audit | Cloudflare D1 |
-| **KV** | 紧急开关、限流计数、登录尝试计数、公告 | Cloudflare KV |
-| **R2** | 新闻封面、产品截图、可选皮肤包 | Cloudflare R2 |
-| **Pages** | 猫邮局 Web、管理后台 SPA | Cloudflare Pages |
+| **单 Worker（API + 站点）** | `/v1/*` 公开接口、`/admin/api/*` 后台接口、`/news` 服务端渲染、静态资源（`assets` 绑定） | Cloudflare Workers |
+| **Cron** | 沉海、橱窗过期、举报归档、日统计汇总 | Workers Cron Triggers（同一 Worker 的 `scheduled`） |
+| **D1** | 结构化数据：bottles / gallery / news / reports / admin / audit | Cloudflare D1 |
+| **KV** | 紧急开关、公告、**非安全关键**的粗粒度限流 | Cloudflare KV |
+| **R2** | 新闻封面、产品截图、安装包分发 | Cloudflare R2 |
+
+> **2026-11-26 修订：不再使用 Cloudflare Pages。** 站点与后台都作为静态资源由**同一个 Worker**
+> 提供（Wrangler `assets` 绑定）。理由见下节「同源部署」。
+
+---
+
+### 同源部署（2026-11-26 定，取代原「Pages + Functions」）
+
+**决定**：站点、后台、API 全部在**同一个自定义域名**下，由一个 Worker 提供。
+
+```
+https://boringtime.cn/             → 静态：首页 / 橱窗 / 下载 / 法务
+https://boringtime.cn/news/:id     → Worker 渲染 HTML（SEO + OG 标签）
+https://boringtime.cn/admin        → 静态 SPA
+https://boringtime.cn/v1/*         → JSON API（桌面端 + 公开只读）
+https://boringtime.cn/admin/api/*  → JSON API（后台，会话 Cookie）
+```
+
+**为什么改（原 Pages 方案的问题）**：
+
+| 问题 | 后果 |
+|---|---|
+| 后台 SPA 与 API 不同源 | Cookie 必须 `SameSite=None; Secure`，CSRF 防护被削弱，还要维护 CORS 白名单与预检 |
+| Pages + Functions + 独立 Worker | 三个部署单元、三套环境变量、三处域名配置；私有仓库下预览环境也用不上 |
+| 路由优先级（Pages 与 Worker Routes 共存） | 需要实测验证，是一类隐性故障源 |
+
+同源之后：**零 CORS、Cookie `SameSite=Strict` 直接可用、一个部署单元、一次 `wrangler deploy`**。
+
+**代价（已接受）**：失去 Pages 的 PR 预览部署。私有仓库 + 单人开发，这个代价可接受。
+
+**域名**：`boringtime.cn`（2026-11-26 定），Worker 绑定自定义域；`*.workers.dev` 保留作调试入口，
+但**不对外公布**（国内不可达，见 `SERVER.md` 第〇节）。
+
+**SEO 分工**：只有 `/news/:id` 需要服务端渲染（标题 / 摘要 / OG）；`/gallery` 全程 `noindex`，
+用静态页 + 客户端拉接口即可（见 `WINDOW.md` 4.3）。
 
 ### 部署目标与可迁移性（2026-11-25 定）
 
@@ -143,11 +176,14 @@
 | 路径 | 内容 |
 |---|---|
 | `/` | 一句话 + 下载按钮 + 最近 3 条橱窗内容 |
-| `/piaoliu` | 橱窗流：按时段筛选（深夜 / 清晨 / 白天 / 傍晚），游标分页 |
+| `/gallery` | 橱窗流：按时段筛选（深夜 / 清晨 / 白天 / 傍晚），游标分页；全程 `noindex` |
 | `/news`、`/news/:id` | 官方新闻列表与详情 |
 | `/privacy`、`/terms` | 法务页（与客户端 `docs/legal/` 同源生成，避免两套文案） |
 
-**技术（已定）**：公开站点用 **Astro**（静态优先、SEO 好、可嵌 React 岛）；管理后台用 **Vite + React 19**（与现有栈一致）。
+**技术（2026-11-26 修订）**：
+- 公开站点：**静态 HTML + 客户端拉接口**（`build-site.cjs` 现有方式即可），只有 `/news/:id` 由 Worker 渲染 HTML（SEO / OG）。**暂不引入 Astro**——真正需要模板化的只有两条新闻页，几十行字符串模板就够；等页面类型超过 8 种或需要 i18n 再评估。
+- 管理后台：**Vite + React 19**（与桌面端渲染层同一套栈），产物作为静态资源由同一个 Worker 的 `assets` 提供。
+- 路径统一为 `/gallery`（不再用 `/piaoliu`），见 `WINDOW.md` 4.1。
 
 ## 五、新闻：官方编辑管道
 
@@ -344,7 +380,7 @@ companion-ball/               私有 GitHub 仓库
 └── packages/
     ├── contracts/            DTO / zod schema / 常量 / 错误码（唯一契约源）
     ├── server/               Workers + D1 migrations + admin API + cron
-    ├── web/                  Astro：橱窗 / 新闻 / 下载页 / 法务页
+    ├── web/                  静态页 + 客户端拉接口：橱窗 / 下载 / 法务（news 由 Worker 渲染）
     └── admin/                Vite + React 19：审核 / 新闻 / 指标 / 开关
 ```
 
@@ -358,14 +394,14 @@ companion-ball/               私有 GitHub 仓库
 - 之前 `CLAUDE.md` 写「不建 monorepo」，本意是**不与 fortune-ball 共享代码包**。单仓库的平台包
   不违反这个初衷；建议把约束改为「**不建跨产品 monorepo**」
 - 契约一处改动 → 一次 PR 三端同步；不用维护私有 registry
-- 发布节奏差异用 **CI 路径过滤** 解决（改 `web/` 只部署 Pages，不打包桌面）
+- 发布节奏差异用 **CI 路径过滤** 解决（改 `web/` 只构建产物，不打包桌面）
 
 ### 私有仓库的四个后果（已接受）
 
 | 后果 | 处理 |
 |---|---|
 | GitHub Releases 对私有仓库不公开 | 安装包改发 **R2**，官网下载页签名 + 版本号；Release 只做内部记录 |
-| 私有仓库 Pages 需 Pro | 官网/后台本来就用 **Cloudflare Pages**，直接替掉 |
+| 私有仓库 Pages 需 Pro | 不用 Pages：站点与后台由同一个 Worker 的 `assets` 提供（见第三节同源部署） |
 | Actions 分钟 2000/月 | `paths:` 过滤 + 缓存；文档改动不触发构建 |
 | 不能选择性开源 | 接受；隐私信任靠协议 + 审计，不靠源码公开 |
 
@@ -380,7 +416,7 @@ companion-ball/               私有 GitHub 仓库
 6. **CI**：GitHub Actions 按路径过滤；Cloudflare 用 `wrangler action` 部署
 
 > 收益：契约不再靠测试死撑；一次改动三端同步。
-> 代价：S3 验收顺延约 1–2 周；私有仓库后发布渠道需改用 R2 + Pages。
+> 代价：S3 验收顺延约 1–2 周；私有仓库后发布渠道需改用 R2 + 自有域名（boringtime.cn）。
 
 ## 十、资源评估
 
@@ -391,7 +427,7 @@ companion-ball/               私有 GitHub 仓库
 | contracts 抽取 + 三端接入 | 3–5 | 一次性收敛，越早越省 |
 | server v2（橱窗 / 新闻 / admin API / cron / 迁移） | 8–10 | 含测试 |
 | **登录（API Key + TOTP + 会话 + 限流 + 审计）** | **3–4** | 全部走 WebCrypto 原语；比密码哈希少一半工作 |
-| 猫邮局 web（3–5 个页面，Astro） | 6–8 | 含视觉，不含品牌设计 |
+| 猫邮局 web（静态页 + Worker 渲染 news） | 6–8 | 含视觉，不含品牌设计 |
 | 管理后台 SPA | 6–8 | 审核 / 新闻 / 指标 / 开关 / 账号 |
 | 桌面端接入（新闻 + 公开勾选 + 设置） | 3–5 | core 纯函数 + IPC 五处同步 |
 | **monorepo 改造 + CI / 发布渠道切换** | **2–3** | workspaces + Actions 路径过滤 + R2 下载页 |
@@ -414,7 +450,7 @@ companion-ball/               私有 GitHub 仓库
 | D1 | 5GB / 500 万行读/天 | $0 |
 | KV | 10 万读/天 | $0 |
 | R2 | 10GB 存储，出流量免费 | $0 |
-| Pages | 免费 | $0 |
+| Workers 静态资源（assets） | 免费额度内不计请求 | $0 |
 | 域名 | — | ≈ $10–15/年 |
 | **合计** | — | **≈ $10–15/年** |
 
@@ -472,7 +508,7 @@ companion-ball/               私有 GitHub 仓库
 2. **新闻官方编辑人工发布**：RSS 仅作选题来源，不直接展示。
 3. **单仓库 monorepo（私有）**：根包 = 桌面端，`packages/{contracts,server,web,admin}`。
 4. **后台登录用 API Key + TOTP**：不存明文密码、不用 Workers Paid、不发明加密算法。
-5. **网页技术栈用 Astro**；管理后台用 Vite + React 19。
+5. **网页技术栈：静态 HTML + 客户端拉接口；只有 news 由 Worker 渲染**；管理后台用 Vite + React 19。**不使用 Cloudflare Pages，站点与后台同源单 Worker。**
 6. **橱窗与私池完全分开**：独立 `gallery_bottles` 表与生命周期；橱窗是快照，不进捡瓶通道。
 7. **下载属于站点**：安装包发 R2，由站点下载页（`/v1/download/*`）分发；GitHub Release 仅作内部记录。
 8. **域名自行申请**：S0 不阻塞，下载链接先占位。
