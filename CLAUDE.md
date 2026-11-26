@@ -35,6 +35,7 @@
 | `docs/PRODUCT-THESIS.md` | 产品论点：Mochi 镜鉴、第四根支柱「期待」、语言资产、M1–M6、投资逻辑 |
 | `docs/OCCASIONS.md` | P1.5 事件记忆：随口说一句 → 记住 → 接住（数据模型、规则、验收） |
 | `docs/PLATFORM.md` | 平台架构：网页橱窗 / 新闻 / 管理后台 / monorepo / 资源评估 |
+| `docs/WINDOW.md` | **窗口与灯塔**：漂流瓶主页 + 运营后台的产品设计（为什么不是社区） |
 | `docs/PLATFORM-S0.md` | 平台 S0 执行清单：workspaces、契约收敛、server 迁入、守卫适配、发布渠道、CI |
 | `docs/REPO-LAYOUT.md` | 仓库设计图：目录结构、依赖方向、守卫、命令 |
 | `docs/ARCHITECTURE.md` | 技术架构：分层、进程模型、数据流、IPC、存储、安全、手机端 |

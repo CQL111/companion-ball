@@ -147,6 +147,9 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
   P2 页边一句）先于社交公开化，每个阶段都有闸门
 - ✅ **平台架构（2026-11-25）**：新增 [`docs/PLATFORM.md`](docs/PLATFORM.md)；单仓库私有 monorepo，
   `packages/{contracts,server,web,admin}`；网页只读橱窗、新闻官方编辑、后台 API Key + TOTP
+- ✅ **窗口与灯塔设计（2026-11-26）**：新增 [`docs/WINDOW.md`](docs/WINDOW.md)——
+  漂流瓶主页「不是社区」的判据（无互动、无账号、无独立 URL）、静读模式、三层冷启动；
+  后台隐私边界（**管理员看不到私池**，写成代码约束）、值班队列、封海开关
 - ✅ **平台 S0 完成（2026-11-25）**：workspaces + `packages/contracts` 唯一契约源（`mailbox.ts` 改为
   re-export，`server/src/rules.ts` 副本删除）+ `server/` 迁入 `packages/server`；231 单测 / 17 e2e
 - ✅ **P0.5「不说话的身体」（0.9.4）**：`core/needMotion` 需求 → 动作计划；252 单测 + 真机 6/6
@@ -172,6 +175,7 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 | `docs/PRODUCT-THESIS.md` | 产品论点：镜鉴、第四根支柱、语言资产、机制、投资逻辑 | 产品 / 投资人 |
 | `docs/OCCASIONS.md` | P1.5 事件记忆规格：数据模型、抽取、隐式确认、接住节奏、验收 | 工程 |
 | `docs/PLATFORM.md` | 平台架构：网页橱窗 / 新闻管道 / 管理后台 / monorepo / 资源评估 | 产品 / 工程 |
+| `docs/WINDOW.md` | **窗口与灯塔**：漂流瓶主页 + 运营后台产品设计；「不是社区」的判据与红线 | 产品 |
 | `docs/PLATFORM-S0.md` | 平台 S0 执行清单：workspaces、契约收敛、server 迁入、守卫适配、发布渠道、CI | 工程 |
 | `docs/REPO-LAYOUT.md` | 仓库设计图：目录结构、依赖方向、守卫、命令 | 工程 |
 | `docs/ARCHITECTURE.md` | 技术栈、分层、进程、数据流、IPC、存储、安全、构建、手机端 | 工程 |
