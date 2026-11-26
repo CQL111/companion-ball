@@ -2,6 +2,7 @@
 // 网络细节在 services/bottleApi.ts；领域规则在 core/mailbox.ts。
 
 import crypto from 'node:crypto'
+import { app } from 'electron'
 import * as mailbox from '../core/mailbox'
 import type { BottleDTO, ReplyDTO } from '../core/mailbox'
 import * as notebook from '../core/notebook'
@@ -13,8 +14,11 @@ import { getNotebook, setNotebook, store } from './store'
  * 默认服务端地址。服务器部署后在这里填一行即可，用户无需手动配置。
  * 留空 = 该构建的许愿瓶未开放（界面会显示「尚未开放」）。
  * 国内版与海外版可以用不同的构建分别填写。
+ *
+ * 开发和 e2e 时默认指向本地服务端（npm run dev:platform），这样不用手填地址；
+ * 打包版必须显式配置 —— 正式发布绝不能悄悄连到某个服务器。
  */
-const DEFAULT_ENDPOINT = ''
+const DEFAULT_ENDPOINT = app.isPackaged ? '' : 'http://127.0.0.1:8080'
 
 /** 设备令牌：由 installId 派生，稳定且可吊销（服务端只存哈希） */
 function deviceToken(): string {
@@ -68,7 +72,10 @@ function fail(code: string): MailResult<never> {
 }
 
 // ---------- 扔 ----------
-export async function throwBottle(body: string): Promise<MailResult<{ id: string; alias: string }>> {
+export async function throwBottle(
+  body: string,
+  requestPublic = false,
+): Promise<MailResult<{ id: string; alias: string; publicPending: boolean }>> {
   const ep = endpoint()
   if (!ep) return fail('SERVICE_PAUSED')
 
@@ -78,13 +85,13 @@ export async function throwBottle(body: string): Promise<MailResult<{ id: string
   const todayCount = countToday()
   if (!mailbox.withinDailyLimit(todayCount)) return fail('DAILY_LIMIT')
 
-  const r = await api.throwBottle(ep, check.cleaned, utcOffset())
+  const r = await api.throwBottle(ep, check.cleaned, utcOffset(), requestPublic)
   if (!r.ok) return fail(r.error)
 
   // 本地计数与投递放在一起：调用方不需要记得再调 markThrown
   markThrown()
-  logger.info('bottle.throw', `ok alias=${r.data.alias} today=${countToday()}`)
-  return { ok: true, data: { id: r.data.id, alias: r.data.alias } }
+  logger.info('bottle.throw', `ok alias=${r.data.alias} today=${countToday()} public=${requestPublic}`)
+  return { ok: true, data: { id: r.data.id, alias: r.data.alias, publicPending: r.data.publicPending } }
 }
 
 // ---------- 猫出门：捡一张（可能空手） ----------

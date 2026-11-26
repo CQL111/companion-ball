@@ -20,6 +20,10 @@ export default function App(): React.ReactElement {
   const [picked, setPicked] = useState<PickedBottle | null>(null)
   const [reply, setReply] = useState('')
   const [waiting, setWaiting] = useState(false)
+  /** 这张纸条是否允许被网页橱窗展示（逐条选，默认不公开，不记忆） */
+  const [requestPublic, setRequestPublic] = useState(false)
+  /** 刚扔出的那张是否已提交公开审核 */
+  const [sentPublic, setSentPublic] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -45,12 +49,14 @@ export default function App(): React.ReactElement {
     setBusy(true)
     setMsg({ kind: '', text: '' })
     try {
-      const r = await window.api.bottleThrow(text)
+      const r = await window.api.bottleThrow(text, requestPublic)
       if (!r.ok) {
         setMsg({ kind: 'err', text: r.errorText || '放不进去' })
         return
       }
+      setSentPublic(r.data?.publicPending === true)
       setText('')
+      setRequestPublic(false)
       setPhase('sent')
       window.logger.info('mail.throw', 'ok')
     } finally {
@@ -165,6 +171,18 @@ export default function App(): React.ReactElement {
             onChange={(e) => setText(e.target.value)}
             disabled={busy}
           />
+          <label className="mail-public">
+            <input
+              type="checkbox"
+              checked={requestPublic}
+              onChange={(e) => setRequestPublic(e.target.checked)}
+              disabled={busy}
+            />
+            <span>
+              可以让别人在海边看到
+              <em>（只有这张；不带名字，审核通过后出现在网页上）</em>
+            </span>
+          </label>
           <div className="mail-row">
             <span className="mail-count">
               {text.length}/{MAX}
@@ -184,6 +202,11 @@ export default function App(): React.ReactElement {
         <section className="mail-card center">
           <p className="mail-big">已经放进海里了。</p>
           <p className="mail-hint">它可能漂到很远的地方，也可能没人捡到。</p>
+          {sentPublic && (
+            <p className="mail-hint">
+              也会有人在海边的窗口读到它——审核通过后，它会出现在网页上，但没有你的名字。
+            </p>
+          )}
           <div className="mail-row center">
             <button className="btn" onClick={() => setPhase('write')}>
               再写一张

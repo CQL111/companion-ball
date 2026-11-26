@@ -68,25 +68,55 @@ console.log('\n▸ 构建服务端…')
 run('npm run build -w @companion/server')
 
 // ---------- 3. 是否有管理员？没有就创建一个 ----------
-const hasAdmin = await (async () => {
+async function probeAdmin() {
   try {
     const { DatabaseSync } = await import('node:sqlite')
-    if (!existsSync(dbPath)) return false
+    if (!existsSync(dbPath)) return { exists: false, broken: false }
     const db = new DatabaseSync(dbPath)
     const row = db.prepare('SELECT COUNT(*) AS n FROM admin_users').get()
+    const first = db.prepare('SELECT username, totp_secret FROM admin_users LIMIT 1').get()
     db.close()
-    return Number(row?.n ?? 0) > 0
-  } catch {
-    return false
-  }
-})()
+    if (Number(row?.n ?? 0) === 0) return { exists: false, broken: false }
 
-if (!hasAdmin) {
+    // 用当前的 TOTP_MASTER_KEY 试着解一次已存的密钥。
+    // 解不开 = key 换过（或库是别的机器拷来的），登录必然失败，必须提前告诉用户。
+    let broken = false
+    try {
+      const all = Buffer.from(String(first?.totp_secret ?? ''), 'base64')
+      const master = Buffer.from(masterKey, 'base64')
+      const material = master.length === 32 ? master : Buffer.from(await crypto.subtle.digest('SHA-256', master))
+      const key = await crypto.subtle.importKey('raw', material, { name: 'AES-GCM' }, false, ['decrypt'])
+      await crypto.subtle.decrypt({ name: 'AES-GCM', iv: all.subarray(0, 12) }, key, all.subarray(12))
+    } catch {
+      broken = true
+    }
+    return { exists: true, broken, username: String(first?.username ?? 'admin') }
+  } catch {
+    return { exists: false, broken: false }
+  }
+}
+
+const admin = await probeAdmin()
+
+if (admin.broken) {
+  console.error('')
+  console.error('❌ 数据库里的管理员是用**另一个** TOTP_MASTER_KEY 创建的，现在解不开。')
+  console.error('   常见原因：改了 .env 里的 TOTP_MASTER_KEY，或把别的机器的库拷了过来。')
+  console.error('')
+  console.error('   修复：npm run dev:reset-admin   （重建管理员，会打印新的 Key）')
+  console.error('        npm run db:reset           （清空整个开发库，数据也会没）')
+  console.error('')
+  process.exit(1)
+}
+
+if (!admin.exists) {
   console.log('\n▸ 还没有管理员，创建一个（只显示一次）…')
   run(`node --experimental-sqlite scripts/bootstrap-admin.mjs admin`, SERVER, {
     TOTP_MASTER_KEY: masterKey,
     DB_PATH: dbPath,
   })
+} else {
+  console.log(`\n▸ 已有管理员「${admin.username}」，沿用（忘记凭据用 npm run dev:reset-admin）`)
 }
 
 // ---------- 4. 起服务 ----------

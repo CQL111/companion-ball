@@ -499,8 +499,8 @@ export function registerIpc(): void {
     return bottleStatusView()
   })
 
-  handle(CH.bottleThrow, async (_e, body: unknown) => {
-    return mail.throwBottle(String(body ?? ''))
+  handle(CH.bottleThrow, async (_e, body: unknown, requestPublic: unknown) => {
+    return mail.throwBottle(String(body ?? ''), requestPublic === true)
   })
 
   handle(CH.bottlePick, async (_e, force: unknown) => {

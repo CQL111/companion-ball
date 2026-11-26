@@ -255,7 +255,8 @@ export interface CompanionApi {
   // 许愿瓶（S3，需用户主动开启）
   bottleStatus(): Promise<BottleStatusView>
   bottleToggle(payload: { enabled: boolean; endpoint?: string }): Promise<BottleStatusView>
-  bottleThrow(body: string): Promise<MailApiResult<{ id: string; alias: string }>>
+  /** requestPublic = 允许被别人在网页橱窗里看到（逐条选择，默认不公开） */
+  bottleThrow(body: string, requestPublic?: boolean): Promise<MailApiResult<{ id: string; alias: string; publicPending: boolean }>>
   bottlePick(force?: boolean): Promise<MailApiResult<{ id: string; body: string; alias: string } | null>>
   bottleReply(bottleId: string, body: string): Promise<MailApiResult<true>>
   bottleInbox(): Promise<MailApiResult<Array<{ bottleBody: string; replyBody: string; replyAlias: string; createdAt: number }>>>

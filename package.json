@@ -46,7 +46,9 @@
     "dev:platform:watch": "node scripts/dev-platform.mjs --watch",
     "dev:web": "npm run build -w @companion/web && echo 已构建 → packages/server/public，由 server 提供",
     "dev:admin": "npm run build -w @companion/admin && echo 已构建 → packages/server/public/admin，由 server 提供",
-    "db:reset": "node scripts/reset-dev-db.mjs"
+    "db:reset": "node scripts/reset-dev-db.mjs",
+    "dev:reset-admin": "node scripts/reset-dev-admin.mjs",
+    "live:check": "node scripts/live-check.mjs"
   },
   "keywords": [
     "electron",

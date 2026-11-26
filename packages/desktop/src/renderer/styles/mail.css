@@ -68,6 +68,25 @@ textarea:focus { border-color: var(--glass-hairline); }
 .mail-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
 .mail-row.center { justify-content: center; }
 .mail-count { color: var(--text-3); font-size: 11px; }
+
+/* 逐条公开：默认不勾，不记忆；勾了才可能出现在网页橱窗 */
+.mail-public {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 9px 11px;
+  border-radius: var(--r-sm);
+  background: var(--glass-1);
+  border: 1px solid var(--glass-hairline);
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.6;
+  cursor: pointer;
+}
+.mail-public input { margin-top: 2px; flex: none; }
+.mail-public em { display: block; color: var(--text-3); font-style: normal; font-size: 11px; }
+.mail-public:hover { border-color: var(--accent-gold); }
 .mail-sep { border: none; border-top: 1px solid var(--glass-hairline); margin: 16px 0 12px; }
 
 .mail-msg {

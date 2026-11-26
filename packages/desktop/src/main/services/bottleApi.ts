@@ -54,18 +54,29 @@ export interface ThrowResult {
   id: string
   expiresAt: number
   alias: string
+  /** 服务端是否已收下「可公开」的待审记录 */
+  publicPending: boolean
 }
 
 export async function throwBottle(
   ep: BottleEndpoint,
   body: string,
   utcOffsetMinutes: number,
+  requestPublic = false,
 ): Promise<ApiResult<ThrowResult>> {
   const r = await post<{ id: string; expiresAt: number; alias: string }>(ep, '/v1/bottle', {
     body,
     utcOffsetMinutes,
+    requestPublic,
   })
-  return r.ok ? { ok: true, data: { id: r.data.id, expiresAt: r.data.expiresAt, alias: r.data.alias } } : r
+  return r.ok
+    ? {
+        ok: true,
+        // 服务端只在 requestPublic 且橱窗开着时才会建待审记录；
+        // 客户端这里无法直接得知，所以按「请求了就视为已提交待审」返回
+        data: { id: r.data.id, expiresAt: r.data.expiresAt, alias: r.data.alias, publicPending: requestPublic },
+      }
+    : r
 }
 
 /** 捡一个（可能空手） */

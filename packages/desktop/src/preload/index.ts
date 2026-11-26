@@ -52,7 +52,7 @@ const api: CompanionApi = {
   // 许愿瓶（S3）
   bottleStatus: () => ipcRenderer.invoke(CH.bottleStatus),
   bottleToggle: (payload) => ipcRenderer.invoke(CH.bottleToggle, payload),
-  bottleThrow: (body) => ipcRenderer.invoke(CH.bottleThrow, body),
+  bottleThrow: (body, requestPublic) => ipcRenderer.invoke(CH.bottleThrow, body, requestPublic === true),
   bottlePick: (force) => ipcRenderer.invoke(CH.bottlePick, !!force),
   bottleReply: (bottleId, body) => ipcRenderer.invoke(CH.bottleReply, bottleId, body),
   bottleInbox: () => ipcRenderer.invoke(CH.bottleInbox),
