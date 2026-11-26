@@ -457,8 +457,128 @@ tests/petState.test.ts    状态机单测
 **内容资产**（台词、人格卡、日记模板、信纸定义）全部放 `packages/desktop/src/data/`，不内嵌进 HTML。
 `packages/desktop/src/core/` 在手机端立项时发布为独立 npm 包，由另一个仓库依赖（不建 monorepo）。
 
-## 十四、变更记录
+## 十五、平台架构（网页 / 后台 / 服务端 / 爬虫）
+
+> 产品设计见 [`WINDOW.md`](WINDOW.md)；基础设施与费用见 [`PLATFORM.md`](PLATFORM.md)；
+> 私池规则见 [`SERVER.md`](SERVER.md)。本节只回答「代码怎么分、依赖往哪走」。
+
+### 15.1 五个可独立部署的单元
+
+```
+                  ┌─────────────────────────────┐
+                  │ packages/contracts          │  纯类型 + 常量 + 校验
+                  │ （零平台依赖、零运行时依赖）  │  所有其他包的唯一契约源
+                  └──────────┬──────────────────┘
+        ┌───────────┬────────┼─────────┬──────────────┐
+        ▼           ▼        ▼         ▼              ▼
+┌───────────┐ ┌──────────┐ ┌──────┐ ┌──────────┐ ┌─────────────┐
+│ desktop   │ │ server   │ │ web  │ │ admin    │ │ crawler     │
+│ Electron  │ │ 瓶子/橱窗 │ │Astro │ │Vite+React│ │ （独立仓库）  │
+│           │ │ /新闻 API │ │ 橱窗 │ │ 19       │ │ 只推送线索    │
+└───────────┘ └──────────┘ └──────┘ └──────────┘ └─────────────┘
+     │             ▲          │          │             │
+     └─────────────┴──────────┴──────────┘             │
+            HTTP + JSON（契约在 contracts）              │
+                                                       │
+            线索走独立 service token ───────────────────┘
+```
+
+| 单元 | 运行时 | 部署 | 认证方式 |
+|---|---|---|---|
+| `desktop` | Electron | 安装包（R2 分发） | `X-Device-Token`（installId 派生） |
+| `server` | Workers **或** Node 22（同一份 handler） | Cloudflare / VPS | 设备令牌 + admin 会话 |
+| `web` | Astro 静态 + Pages Functions | Cloudflare Pages | 无（只读） |
+| `admin` | Vite SPA | Cloudflare Pages | API Key + TOTP 会话 |
+| `crawler` | **不在本仓库** | 独立进程/容器 | `NEWS_INGEST_TOKEN` |
+
+### 15.2 依赖规则（新增一条硬约束）
+
+```
+contracts ←── desktop / server / web / admin
+             （单向；谁都不许反向依赖 contracts 之外的同级包）
+```
+
+- `desktop` **不 import** `server` / `web` / `admin` 的任何代码
+- `web` 与 `admin` **不直接连数据库**——一切写操作走 `server` 的 HTTP 接口
+- `server` 是唯一持有 D1/KV 凭证的单元；`web` / `admin` 的 Pages Functions 只做代理与静态托管
+- **crawler 只认 contracts 里的 `NewsLeadPush`**，不 import server 实现
+
+> 为什么新增这条：monorepo 里最容易发生的腐化是「前端顺手引后端一个函数」，
+> 一旦发生，`web` 就无法独立部署、也无法按路径过滤做 CI。
+> **待落地**：`scripts/check-package-deps.js`——扫 `packages/*/src` 的 import 图，越级依赖即失败。
+
+### 15.3 服务端双运行时（已实现，非计划）
+
+`packages/server/src/handler.ts` 是**平台无关**的请求处理（只依赖 `Request` / `Response` 标准对象），
+`worker.ts` 与 `node.ts` 是两个薄适配层：
+
+```
+handler.ts  ←─ worker.ts（Cloudflare Workers）
+            ←─ node.ts  （Node 22 + node:http + node:sqlite → dist/node.mjs）
+```
+
+`db.ts` 定义 `Db` 接口 + `d1Adapter` + `sqliteAdapter`（WAL / busy_timeout / 串行化队列）。
+
+**这条设计的意义**：`workers.dev` 在国内不可达，VPS 是必需的退路。
+业务逻辑只有一份，**迁 VPS 不需要重写**，因此可以做到「海外 Workers、国内 VPS」双活。
+
+### 15.4 请求链路
+
+**桌面端捡瓶**：
+```
+pet.ts → preload → main/mail.ts → services/bottleApi.ts
+      → POST /v1/bottle/pick  (X-Device-Token)
+      → handler.ts → db.ts → D1/SQLite
+```
+
+**网页看橱窗（只读，无令牌）**：
+```
+Astro 静态页 →（构建期）预取 /v1/gallery 或（运行期）fetch
+             → handler.ts → gallery_bottles（独立表，不碰 bottles）
+```
+
+**后台批准一条瓶子**：
+```
+admin SPA → POST /admin/moderation/:id  (会话 Cookie)
+          → handler.ts → 校验角色 → UPDATE gallery_bottles
+          → 写 audit_log → +1 daily_stats
+```
+
+**爬虫推线索**：
+```
+crawler → POST /v1/internal/news/leads  (NEWS_INGEST_TOKEN)
+        → handler.ts → 按 fingerprint 去重 → INSERT news_leads (status='new')
+        → 后台「线索」页由 operator 消化（无自动发布路径）
+```
+
+### 15.5 构建与部署（路径过滤）
+
+| 改了哪里 | 触发什么 | 部署到 |
+|---|---|---|
+| `packages/desktop/**` | 桌面构建 + e2e | R2（安装包） |
+| `packages/server/**` | typecheck + 单测 | `wrangler deploy` 或 VPS |
+| `packages/web/**` | Astro build | Cloudflare Pages |
+| `packages/admin/**` | Vite build | Cloudflare Pages |
+| `packages/contracts/**` | **全部**（契约变更三端同步） | — |
+| `docs/**` | 只跑门禁（`check-docs` / `check-secrets`） | — |
+
+GitHub Actions 用 `paths:` 过滤；`contracts` 变更必须全量跑，这是唯一不做优化的情况。
+
+### 15.6 安全边界（跨端汇总）
+
+| 数据 | desktop | server | web | admin |
+|---|---|---|---|---|
+| 用户私池瓶子 | 作者可见、捡到者可见 | 存储（作者只存哈希） | ❌ | ❌（仅被举报的单条） |
+| 橱窗内容 | ❌ | ✅ | ✅（已批准） | ✅ |
+| 页边一句话 | ✅ 仅本地 | ❌ **永不出网** | ❌ | ❌ |
+| 设备令牌 | 持有原文 | 只存哈希 | ❌ | 只能按哈希封禁 |
+| AI Key | 用户本地 / 环境变量 | ❌ | ❌ | ❌ |
+
+> 页边一句话的「永不出网」由 `scripts/check-margin-privacy.js` 机器守护（见 CHANGELOG 0.9.9）。
+
+## 十六、变更记录
 
 | 日期 | 变更 |
 |---|---|
 | 2026-11-20 | 迁移到 electron-vite 4 + React 19 + TS：主进程拆分、core/shared/preload 分层、renderer React 化（宠物窗口保持命令式）、zod 校验、Vitest、`check:core` 支持 TS |
+| 2026-11-26 | 新增第十五节「平台架构」：五单元依赖规则、双运行时、请求链路、路径过滤构建、跨端安全边界 |
