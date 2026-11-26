@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>海上的消息 · 团子猫</title>
+<meta name="description" content="官方编辑，每天最多一条。会进你的笔记本。" />
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="top">
+  <a class="mark" href="/">团子猫</a>
+  <nav>
+    <a href="/gallery">看海</a>
+    <a href="/news">海上的消息</a>
+    <a href="/download">下载</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <span class="kicker">消息</span>
+  <h1>海上的消息</h1>
+  <p class="lead">官方编辑写的。每天最多一条，会进你的笔记本——所以不制造焦虑，也不摆出全世界的坏消息。</p>
+  <div id="news-list" style="margin-top:34px">
+    <p class="status">正在收信…</p>
+  </div>
+
+  <footer class="foot">
+    <span>每天最多一条</span>
+    <span><a href="/privacy">隐私</a> · <a href="/terms">协议</a></span>
+  </footer>
+</main>
+
+<script>
+fetch('/v1/news')
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error('news'))))
+  .then((data) => {
+    const root = document.getElementById('news-list')
+    if (!data.items.length) {
+      root.innerHTML = '<p class="empty">还没有消息。<br>不是每天都必须有。</p>'
+      return
+    }
+    root.innerHTML = data.items
+      .map(
+        (n) => `
+        <article class="news-item">
+          <h3><a href="/news/${encodeURIComponent(n.id)}">${n.title}</a></h3>
+          <p class="summary">${n.summary}</p>
+          ${n.sourceName ? `<p class="src">来源：${n.sourceName}</p>` : ''}
+        </article>`,
+      )
+      .join('')
+  })
+  .catch(() => {
+    document.getElementById('news-list').innerHTML = '<p class="empty">海面不太平静，等会儿再看。</p>'
+  })
+</script>
+</body>
+</html>

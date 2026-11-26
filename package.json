@@ -10,7 +10,7 @@
     "dev": "npm run dev -w @companion/desktop",
     "start": "npm run start -w @companion/desktop",
     "start:hidden": "npm run start:hidden -w @companion/desktop",
-    "test": "npm test -w @companion/desktop && npm test -w @companion/contracts --if-present",
+    "test": "npm test -w @companion/desktop && npm test -w @companion/contracts --if-present && npm test -w @companion/server && node scripts/check-admin-privacy.js",
     "test:e2e": "npm run test:e2e -w @companion/desktop",
     "test:all": "npm test && npm run build && npm run test:e2e",
     "typecheck": "npm run typecheck -w @companion/desktop && npm run typecheck -w @companion/contracts",
@@ -40,7 +40,9 @@
     "dev:server": "npm run dev -w @companion/server",
     "deploy:server": "npm run deploy -w @companion/server",
     "test:e2e:build": "npm run build:e2e -w @companion/desktop",
-    "test:e2e:all": "npm run build:e2e -w @companion/desktop && npm run test:e2e -w @companion/desktop && npm run test:e2e:all -w @companion/desktop"
+    "test:e2e:all": "npm run build:e2e -w @companion/desktop && npm run test:e2e -w @companion/desktop && npm run test:e2e:all -w @companion/desktop",
+    "build:platform": "npm run build -w @companion/web && npm run build -w @companion/admin && npm run build -w @companion/server",
+    "test:platform": "node scripts/run-platform-e2e.mjs"
   },
   "keywords": [
     "electron",

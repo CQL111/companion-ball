@@ -16,11 +16,13 @@
 
 import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readFileSync, mkdirSync, existsSync } from 'node:fs'
+import { readFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { sqliteAdapter, type RateCounter, type SqliteDatabase } from './db'
 import { handleRequest, type ServerConfig } from './handler'
+import { migrate } from './migrate'
+import { createStaticServer } from './static'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 /** 包根：源码运行时是 packages/server，打包后是 dist/ 的上一级 */
@@ -114,16 +116,20 @@ export async function startServer(): Promise<{ close(): Promise<void>; port: num
 
   const sqlite = await loadSqlite()
 
-  // 建表必须成功：否则服务「看起来在跑」但所有接口 500
-  const schemaPath = join(PKG_ROOT, 'schema.sql')
-  if (!existsSync(schemaPath)) {
-    throw new Error(`找不到建表脚本：${schemaPath}`)
+  // 迁移：有序执行 migrations/*.sql。建表必须成功——否则服务「看起来在跑」但所有接口 500
+  const migrationsDir = join(PKG_ROOT, 'migrations')
+  if (!existsSync(migrationsDir)) {
+    throw new Error(`找不到迁移目录：${migrationsDir}`)
   }
-  const schema = readFileSync(schemaPath, 'utf8')
+  const migrations = readdirSync(migrationsDir)
+    .filter((f) => f.endsWith('.sql'))
+    .sort()
+    .map((f) => ({ version: f, sql: readFileSync(join(migrationsDir, f), 'utf8') }))
+
+  // 先开一个原始连接跑迁移（也顺便建 WAL）
   const bootstrap = new sqlite.DatabaseSync(dbPath)
   try {
     bootstrap.exec('PRAGMA journal_mode=WAL;')
-    bootstrap.exec(schema)
     bootstrap.exec(
       `CREATE TABLE IF NOT EXISTS rate_counters (
          key        TEXT PRIMARY KEY,
@@ -136,12 +142,18 @@ export async function startServer(): Promise<{ close(): Promise<void>; port: num
   }
 
   const db = sqliteAdapter(dbPath, (p) => new sqlite.DatabaseSync(p))
+  const result = await migrate(db, migrations)
+  if (result.applied.length) console.log(`[server] migrations applied: ${result.applied.join(', ')}`)
 
   const cfg: ServerConfig = {
     db,
     rate: sqliteRateCounter(db),
     downloadBaseUrl: process.env.DOWNLOAD_BASE_URL || '',
     trustProxy: process.env.TRUST_PROXY === '1',
+    siteOrigin: process.env.SITE_ORIGIN || '',
+    totpMasterKey: process.env.TOTP_MASTER_KEY || '',
+    newsIngestToken: process.env.NEWS_INGEST_TOKEN || '',
+    assets: existsSync(join(PKG_ROOT, 'public')) ? createStaticServer(join(PKG_ROOT, 'public')) : undefined,
     limits: {
       bottleTtlDays: envNum('BOTTLE_TTL_DAYS', 7),
       maxPicks: envNum('MAX_PICKS', 3),

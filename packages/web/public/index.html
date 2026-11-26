@@ -1,270 +1,125 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>桌面陪伴 · 团子猫 — 常驻桌角的小团子</title>
-<style>
-  :root {
-    --cream: #fff9f2;
-    --ink: #3a2a1f;
-    --ink-2: #6f5250;
-    --muted: #9a7d78;
-    --rose: #ff8aa3;
-    --rose-deep: #c2607d;
-    --peach: #ffc6d5;
-    --paper: rgba(255, 255, 255, 0.72);
-    --line: rgba(58, 42, 31, 0.12);
-    --shadow: 0 18px 50px rgba(150, 70, 90, 0.16);
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    min-height: 100vh;
-    background:
-      radial-gradient(circle at 15% 10%, #ffe3ec 0%, transparent 45%),
-      radial-gradient(circle at 85% 0%, #fff0d6 0%, transparent 40%),
-      var(--cream);
-    color: var(--ink);
-    font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
-    -webkit-font-smoothing: antialiased;
-    line-height: 1.7;
-  }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 64px 24px 80px; }
-
-  .kicker {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-size: 12px; letter-spacing: .16em; color: var(--rose-deep);
-    text-transform: uppercase;
-  }
-  .kicker::before { content: ""; width: 26px; height: 2px; background: var(--rose); border-radius: 2px; }
-
-  h1 { font-size: clamp(34px, 6vw, 56px); line-height: 1.15; margin: 18px 0 16px; letter-spacing: -.02em; }
-  h1 .grad {
-    background: linear-gradient(120deg, var(--rose-deep), var(--rose) 45%, #e8a94a);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }
-  .lead { font-size: 17px; color: var(--ink-2); max-width: 620px; }
-
-  .hero { display: flex; align-items: center; gap: 48px; flex-wrap: wrap; }
-  .hero-text { flex: 1 1 420px; }
-  .hero-ball { flex: 0 0 220px; display: flex; justify-content: center; }
-
-  /* 团子猫 */
-  .cat {
-    width: 180px; height: 180px; border-radius: 46% 46% 44% 44%;
-    background: radial-gradient(circle at 32% 28%, #fff, var(--peach) 55%, #f7a6bc 100%);
-    box-shadow: 0 26px 50px rgba(200, 96, 125, 0.28), inset 0 -10px 24px rgba(194, 96, 125, 0.18);
-    position: relative; animation: bob 4.4s ease-in-out infinite;
-  }
-  .cat::before, .cat::after {
-    content: ""; position: absolute; top: -14px; width: 52px; height: 52px;
-    background: inherit; border-radius: 50% 50% 8% 50%;
-  }
-  .cat::before { left: 16px; transform: rotate(-14deg); }
-  .cat::after { right: 16px; transform: rotate(104deg); }
-  .face { position: absolute; inset: 0; }
-  .eye {
-    position: absolute; top: 84px; width: 16px; height: 10px;
-    border-bottom: 3.5px solid #4a2c34; border-radius: 0 0 50% 50%;
-  }
-  .eye.l { left: 52px; } .eye.r { right: 52px; }
-  .mouth {
-    position: absolute; top: 108px; left: 50%; width: 14px; height: 8px;
-    transform: translateX(-50%);
-    border-bottom: 3px solid #4a2c34; border-radius: 0 0 50% 50%;
-  }
-  .blush {
-    position: absolute; top: 98px; width: 20px; height: 10px; border-radius: 50%;
-    background: rgba(255, 138, 163, .55); filter: blur(1px);
-  }
-  .blush.l { left: 30px; } .blush.r { right: 30px; }
-  @keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
-
-  .meta { display: flex; gap: 10px; flex-wrap: wrap; margin: 26px 0 30px; }
-  .meta span {
-    font-size: 12px; padding: 5px 12px; border-radius: 999px;
-    background: var(--paper); border: 1px solid var(--line); color: var(--ink-2);
-  }
-
-  .dl-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-  .dl-btn {
-    display: inline-flex; align-items: center; gap: 10px;
-    padding: 13px 20px; border-radius: 14px; text-decoration: none;
-    background: linear-gradient(135deg, var(--rose-deep), var(--rose));
-    color: #fff; font-weight: 600; font-size: 14px;
-    box-shadow: 0 12px 26px rgba(200, 96, 125, .32);
-    transition: transform .18s ease, box-shadow .18s ease;
-  }
-  .dl-btn:hover { transform: translateY(-2px); box-shadow: 0 16px 32px rgba(200, 96, 125, .38); }
-  .dl-btn small { display: block; font-weight: 400; font-size: 11px; opacity: .9; }
-  .dl-btn.ghost {
-    background: var(--paper); color: var(--rose-deep);
-    border: 1px solid rgba(200, 96, 125, .28); box-shadow: none;
-  }
-  .dl-btn[aria-disabled="true"] { opacity: .55; filter: grayscale(.35); pointer-events: none; }
-  .dl-note { margin-top: 10px; font-size: 12px; color: var(--ink-2); }
-  .dl-note { font-size: 12.5px; color: var(--muted); }
-
-  section { margin-top: 72px; }
-  h2 { font-size: 26px; margin-bottom: 8px; letter-spacing: -.01em; }
-  .sub { color: var(--muted); font-size: 14.5px; margin-bottom: 26px; }
-
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
-  .card {
-    background: var(--paper); border: 1px solid var(--line); border-radius: 18px;
-    padding: 22px; box-shadow: var(--shadow);
-  }
-  .card .ico { font-size: 22px; }
-  .card b { display: block; margin: 10px 0 6px; font-size: 15.5px; }
-  .card p { font-size: 13.5px; color: var(--ink-2); }
-
-  .steps { display: grid; gap: 12px; max-width: 620px; }
-  .step { display: flex; gap: 14px; align-items: flex-start; }
-  .step i {
-    flex: 0 0 26px; height: 26px; border-radius: 50%; font-style: normal;
-    background: var(--peach); color: var(--rose-deep); font-weight: 700; font-size: 13px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .step p { font-size: 14px; color: var(--ink-2); }
-
-  .note-box {
-    margin-top: 22px; padding: 16px 18px; border-radius: 14px;
-    background: rgba(255, 240, 214, .6); border: 1px dashed rgba(224, 161, 60, .35);
-    font-size: 13px; color: var(--ink-2);
-  }
-
-  footer {
-    margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line);
-    font-size: 12.5px; color: var(--muted); display: flex; gap: 16px; flex-wrap: wrap;
-  }
-  footer a { color: var(--rose-deep); text-decoration: none; }
-</style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>团子猫 — 住你桌面上的小家伙</title>
+<meta name="description" content="不是助手，是住你桌面上的一个小家伙。它记得你说过的话，也记得你不在的时候。" />
+<link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-<div class="wrap">
+<header class="top">
+  <a class="mark" href="/">团子猫</a>
+  <nav>
+    <a href="/gallery">看海</a>
+    <a href="/news">海上的消息</a>
+    <a href="/download">下载</a>
+  </nav>
+</header>
 
-  <div class="hero">
-    <div class="hero-text">
-      <div class="kicker">COMPANION BALL · 产品介绍</div>
-      <h1>桌面陪伴<br><span class="grad">团子猫</span></h1>
-      <p class="lead">
-        一只常驻桌角的小团子。它不会打扰你，但你想说话的时候，它一直都在。
-      </p>
-      <div class="meta">
-        <span>Electron 30</span>
-        <span>Windows 10 / 11</span>
-        <span>v0.1.0 · S0 预览</span>
-        <span>离线可用</span>
-      </div>
-      <div class="dl-row">
-        <a class="dl-btn" id="dl-win" href="#" data-download="win">
-          <span>下载 Windows 版<small id="dl-win-version">安装包准备中</small></span>
-        </a>
-        <a class="dl-btn ghost" href="#roadmap">
-          <span>先看看它会做什么<small>按里程碑推进</small></span>
-        </a>
-      </div>
-      <p class="dl-note" id="dl-note" hidden></p>
-    </div>
-    <div class="hero-ball">
-      <div class="cat">
-        <div class="face">
-          <span class="eye l"></span><span class="eye r"></span>
-          <span class="blush l"></span><span class="blush r"></span>
-          <span class="mouth"></span>
-        </div>
-      </div>
-    </div>
+<main class="wrap">
+  <span class="kicker">桌面陪伴</span>
+  <h1>有人在凌晨两点写下一句话，<br />另一个人在清晨捡到了它。</h1>
+  <p class="lead">
+    团子猫不是助手，是住你桌面上的一个小家伙。它会记得你随口说的事，
+    会在你回来的时候认出你，也会把你写的纸条放进一只瓶子，漂给另一个醒着的人。
+  </p>
+
+  <div class="actions">
+    <a class="btn primary" href="/download">下载 Windows 版</a>
+    <a class="btn" href="/gallery">看看此刻的海 →</a>
   </div>
 
-  <section>
-    <h2>它能做什么</h2>
-    <p class="sub">S0 先把「陪着你」这件事做对，人格与记忆在后面的版本里长出来。</p>
-    <div class="cards">
-      <div class="card">
-        <div class="ico">🐾</div>
-        <b>常驻桌角</b>
-        <p>全屏透明、点击穿透。拖到哪儿就待哪儿，下次启动还在原位。</p>
-      </div>
-      <div class="card">
-        <div class="ico">💬</div>
-        <b>随时聊天</b>
-        <p>点一下它，或按 Ctrl+Alt+F。支持多轮对话，记得你们最近说过的话。</p>
-      </div>
-      <div class="card">
-        <div class="ico">🔒</div>
-        <b>默认离线</b>
-        <p>角色、位置、聊天记录都只在本机。不配置模型也能正常使用。</p>
-      </div>
-      <div class="card">
-        <div class="ico">🧠</div>
-        <b>可换模型</b>
-        <p>线上 DeepSeek，或本机 Ollama —— 自己选，随时切换。</p>
-      </div>
+  <section class="tide">
+    <div class="tide-head">
+      <h2>此刻 · <span id="pool-name">深夜</span></h2>
+      <div><a href="/gallery" style="font-size:13px;color:var(--ink-3)">看更多 →</a></div>
+    </div>
+    <div class="bottles" id="bottles">
+      <p class="status">正在看海…</p>
     </div>
   </section>
 
-  <section>
-    <h2>怎么用</h2>
-    <div class="steps">
-      <div class="step"><i>1</i><p>运行安装包，同意用户协议后，团子猫会出现在屏幕右下角。</p></div>
-      <div class="step"><i>2</i><p>按住它拖动，可以放到任何你喜欢的位置。</p></div>
-      <div class="step"><i>3</i><p>点一下它（或按 <code>Ctrl+Alt+F</code>）打开聊天窗口，说点什么。</p></div>
-      <div class="step"><i>4</i><p>想换模型：右键托盘图标 → 设置。首次使用需要填写一个 API Key，或用本机 Ollama。</p></div>
+  <section class="tide">
+    <div class="tide-head">
+      <h2>海上的消息</h2>
+      <div><a href="/news" style="font-size:13px;color:var(--ink-3)">全部 →</a></div>
     </div>
-    <div class="note-box">
-      🔐 API Key 只保存在本机配置文件中，界面只显示打码片段；日志会自动打码 token。
-      如果你希望完全离线，可以在设置里选择本地模型。
-    </div>
+    <div id="news-mini"><p class="status">正在收信…</p></div>
   </section>
 
-  <section id="roadmap">
-    <h2>这条路要走的路</h2>
-    <p class="sub">S0 只是骨架。接下来按里程碑推进，每一步都有可验证的门槛。</p>
-    <div class="cards">
-      <div class="card"><b>S1 · 验证</b><p>角色是否可爱、是否让人想留下 —— 用真实反馈回答。</p></div>
-      <div class="card"><b>S2 · 人格</b><p>台词库、情绪状态、轻记忆：让它「像有自己的性格」。</p></div>
-      <div class="card"><b>S3 · 环境感知</b><p>在合适的时机轻轻出现，而不是不停打扰。</p></div>
-    </div>
-  </section>
-
-  <footer>
-    <span>桌面陪伴 · 团子猫 &nbsp;MIT License</span>
-    <a href="#roadmap">按里程碑推进</a>
-    <span>数据默认只在本机</span>
+  <footer class="foot">
+    <span>只存在你自己的电脑上 · 不会同步、不会分享</span>
+    <span><a href="/privacy">隐私</a> · <a href="/terms">协议</a> · <a href="/admin" style="opacity:0.5">值班</a></span>
   </footer>
+</main>
 
-</div>
-  <script>
-    // 下载按钮：从站点 API 取最新版本（/v1/download/manifest），失败则保持「准备中」
-    // 不内联任何版本号或域名，构建时不改写本文件。
-    (function () {
-      var btn = document.getElementById('dl-win');
-      var ver = document.getElementById('dl-win-version');
-      var note = document.getElementById('dl-note');
-      if (!btn || !window.fetch) { btn && (btn.setAttribute('aria-disabled', 'true')); return; }
+<script>
+// 首页不弹静读——点这里一律去窗口
+function localPool() {
+  const h = new Date().getHours()
+  if (h >= 22 || h < 5) return ['night', '深夜']
+  if (h < 11) return ['morning', '清晨']
+  if (h < 18) return ['day', '白天']
+  return ['evening', '傍晚']
+}
+const [pool, label] = localPool()
+document.getElementById('pool-name').textContent = label
 
-      fetch('/v1/download/manifest', { cache: 'no-store' })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (m) {
-          var win = m && m.ok && m.assets && m.assets.win;
-          if (!win || !win.url) {
-            btn.setAttribute('aria-disabled', 'true');
-            return;
-          }
-          btn.href = '/v1/download/latest?os=win';
-          btn.removeAttribute('aria-disabled');
-          if (m.version) ver.textContent = 'v' + m.version + ' · Windows 10 / 11';
-          if (note) {
-            var mb = win.bytes ? (win.bytes / 1048576).toFixed(1) + ' MB' : '';
-            note.textContent = '下载后校验 SHA-256：' + String(win.sha256 || '').slice(0, 16) + '…' + (mb ? ' · ' + mb : '');
-            note.hidden = false;
-          }
-        })
-        .catch(function () {
-          btn.setAttribute('aria-disabled', 'true');
-        });
-    })();
-  </script>
+fetch('/v1/gallery?pool=' + pool)
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error('gallery'))))
+  .then((data) => {
+    const root = document.getElementById('bottles')
+    if (!data.items.length) {
+      root.innerHTML = '<p class="empty">海面还很安静。<br>你是最早来的人之一。</p>'
+      return
+    }
+    root.innerHTML = data.items
+      .slice(0, 3)
+      .map(
+        (it) => `
+        <a class="bottle" href="/gallery?pool=${pool}">
+          <div class="text"></div>
+          <div class="by">—— ${escapeHtml(it.alias)}</div>
+        </a>`,
+      )
+      .join('')
+    // 正文用 textContent 写入，避免把用户内容当 HTML
+    const texts = root.querySelectorAll('.text')
+    data.items.slice(0, 3).forEach((it, i) => {
+      if (texts[i]) texts[i].textContent = it.body
+    })
+  })
+  .catch(() => {
+    document.getElementById('bottles').innerHTML = '<p class="empty">海面不太平静，等会儿再看。</p>'
+  })
+
+fetch('/v1/news')
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error('news'))))
+  .then((data) => {
+    const root = document.getElementById('news-mini')
+    if (!data.items.length) {
+      root.innerHTML = '<p class="status">还没有消息。</p>'
+      return
+    }
+    const n = data.items[0]
+    root.innerHTML = `
+      <article class="news-item" style="padding:0;border:none">
+        <h3><a href="/news/${encodeURIComponent(n.id)}"></a></h3>
+        <p class="summary"></p>
+      </article>`
+    root.querySelector('h3 a').textContent = n.title
+    root.querySelector('.summary').textContent = n.summary
+  })
+  .catch(() => {
+    document.getElementById('news-mini').innerHTML = '<p class="status">没有新消息。</p>'
+  })
+
+function escapeHtml(s) {
+  const d = document.createElement('div')
+  d.textContent = s
+  return d.innerHTML
+}
+</script>
 </body>
 </html>

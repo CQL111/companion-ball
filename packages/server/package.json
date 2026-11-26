@@ -11,7 +11,12 @@
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute companion-bottles --file=./schema.sql --remote",
     "db:init:local": "wrangler d1 execute companion-bottles --file=./schema.sql --local",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "admin:bootstrap": "node --experimental-sqlite scripts/bootstrap-admin.mjs",
+    "start:node": "node --experimental-sqlite dist/node.mjs",
+    "test:e2e": "node tests/e2e/platform.mjs"
   },
   "engines": {
     "node": ">=22.5"
@@ -24,6 +29,7 @@
     "@types/node": "^22.20.5",
     "esbuild": "^0.25.0",
     "typescript": "^5.9.3",
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.0.0",
+    "vitest": "^3.2.7"
   }
 }

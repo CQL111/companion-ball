@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>下载 · 团子猫</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="top">
+  <a class="mark" href="/">团子猫</a>
+  <nav>
+    <a href="/gallery">看海</a>
+    <a href="/news">海上的消息</a>
+    <a href="/download">下载</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <span class="kicker">带回家</span>
+  <h1>下载一只猫</h1>
+  <p class="lead">安装包不大。第一次打开会先请你读一遍隐私说明——它不太会撒谎，所以请你认真看。</p>
+
+  <div class="actions" style="margin-top:26px">
+    <a class="btn primary" id="dl-win" href="/v1/download/latest?os=win" rel="nofollow">Windows</a>
+    <a class="btn" id="dl-mac" href="/v1/download/latest?os=mac" rel="nofollow">macOS</a>
+  </div>
+  <p class="status" id="ver" style="text-align:left;padding:0;margin-top:6px"></p>
+
+  <section style="margin-top:44px">
+    <h2 style="font-size:15px;font-weight:500;color:var(--ink-2);margin-bottom:10px">它会做什么</h2>
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:9px;color:var(--ink-2);font-size:14px">
+      <li>· 住你桌角：会走动、打盹、在你回来时认出你</li>
+      <li>· 记得你说过的事：带日期的事会在前一天提一句</li>
+      <li>· 猫的笔记本：每天最多写一句，页边留给你</li>
+      <li>· 许愿瓶：匿名写一张纸条，漂给另一个醒着的人</li>
+    </ul>
+  </section>
+
+  <section style="margin-top:34px">
+    <h2 style="font-size:15px;font-weight:500;color:var(--ink-2);margin-bottom:10px">它不会做什么</h2>
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:9px;color:var(--ink-3);font-size:14px">
+      <li>· 不读你的窗口标题</li>
+      <li>· 不上传你的日记、笔记本、页边一句话</li>
+      <li>· 没有好感度、积分、签到、排行榜</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <span>安装包由本站在线分发</span>
+    <span><a href="/privacy">隐私</a> · <a href="/terms">协议</a></span>
+  </footer>
+</main>
+
+<script>
+fetch('/v1/download/manifest')
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error('no-release'))))
+  .then((m) => {
+    document.getElementById('ver').textContent = m.version ? `当前版本 ${m.version}` : ''
+  })
+  .catch(() => {
+    document.getElementById('ver').textContent = '暂时还没有可下载的版本。'
+    document.getElementById('dl-win').setAttribute('aria-disabled', 'true')
+    document.getElementById('dl-mac').setAttribute('aria-disabled', 'true')
+  })
+</script>
+</body>
+</html>

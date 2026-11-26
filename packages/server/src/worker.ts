@@ -1,8 +1,9 @@
 // worker.ts - Cloudflare Workers 的薄适配层
 // 业务逻辑全部在 ./handler；这里只负责把绑定转成 ServerConfig。
 //
-// 注意：workers.dev 子域在国内不可达，需要给 Worker 绑定自定义域名才可用。
-// 这条路保留是为了「海外用户 / 将来换回 Cloudflare」时不用改业务代码。
+// 注意：workers.dev 子域在国内不可达，需要绑定自定义域名（boringtime.cn）才可用。
+// D1 迁移：wrangler d1 migrations apply（与 Node 共用 migrations/*.sql）。
+// 静态资源：Wrangler `assets` 绑定为 ASSETS，站点与后台都从同一个域提供。
 
 import { d1Adapter, type RateCounter } from './db'
 import { handleRequest, type ServerConfig } from './handler'
@@ -11,6 +12,8 @@ export interface Env {
   DB: D1Database
   RATE_LIMIT?: KVNamespace
   DOWNLOADS?: R2Bucket
+  /** 静态资源（web/dist + admin/dist），Wrangler assets 绑定 */
+  ASSETS?: { fetch(req: Request): Promise<Response> }
   BOTTLE_TTL_DAYS: string
   MAX_PICKS: string
   DAILY_BOTTLE_LIMIT: string
@@ -21,6 +24,7 @@ export interface Env {
   REPORT_PER_DAY?: string
   EMERGENCY_OFF: string
   R2_PUBLIC_BASE_URL?: string
+  SITE_ORIGIN?: string
 }
 
 function num(v: string | undefined, fallback: number): number {
@@ -47,6 +51,10 @@ export default {
       downloadBaseUrl: env.R2_PUBLIC_BASE_URL || '',
       // Workers 前面一定有 Cloudflare，CF-Connecting-IP 由平台注入、不可伪造
       trustProxy: true,
+      siteOrigin: env.SITE_ORIGIN || '',
+      totpMasterKey: (env as unknown as { TOTP_MASTER_KEY?: string }).TOTP_MASTER_KEY || '',
+      newsIngestToken: (env as unknown as { NEWS_INGEST_TOKEN?: string }).NEWS_INGEST_TOKEN || '',
+      assets: env.ASSETS,
       readManifestFromStore: env.DOWNLOADS
         ? async () => {
             const obj = await env.DOWNLOADS!.get('latest.json')

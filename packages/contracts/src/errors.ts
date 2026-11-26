@@ -26,6 +26,25 @@ export function bottleErrorText(code: string): string {
     case 'CONTACT':
     case 'LINK':
       return textErrorText(code as TextCheck['reason'])
+    // 后台 / 橱窗 / 新闻（P2 起）
+    case 'GALLERY_OFF':
+      return '窗口暂时关着'
+    case 'NEWS_OFF':
+      return '今天没有新消息'
+    case 'NOT_APPROVED':
+      return '这条还没被看见'
+    case 'ADMIN_UNAUTHORIZED':
+      return '请先登录'
+    case 'FORBIDDEN':
+      return '这个账号没有权限'
+    case 'BAD_TOTP':
+      return '验证码不对'
+    case 'LOGIN_LOCKED':
+      return '试了太多次，过一会儿再来'
+    case 'NOT_PENDING':
+      return '这条已经处理过了'
+    case 'VALIDATION':
+      return '内容不符合要求'
     default:
       return '出了点问题，等会儿再试'
   }

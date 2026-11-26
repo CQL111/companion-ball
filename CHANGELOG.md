@@ -1,5 +1,60 @@
 # Changelog
 
+## [0.10.0] — 平台可运行：服务端 / 管理后台 / 前台（2026-11-26）
+
+> 桌面端不变（只同步了契约相关的断言）。这一版把 `WINDOW.md` 与 `BUILD-PLATFORM.md`
+> 里的设计**真正写成了能跑的三套系统**，并用真实 HTTP 端到端验证过。
+
+### 地基（BUILD-PLATFORM 的 P0）
+- **迁移机制**：删除 `schema.sql`，改为 `migrations/0001…0006`。D1 与 `node:sqlite` 共用同一套文件；
+  `migrate.ts` 逐条执行并记录 `schema_migrations`，把 `duplicate column` 视为幂等
+  （SQLite 的 `ALTER TABLE` 没有 `IF NOT EXISTS`，这是真实踩到的坑）
+- **SQL 收口**：所有 SQL 进 `src/repo/`（bottles / gallery / news / admins / reports / stats），路由层不再出现 SQL
+- **handler.ts 变薄**：458 行 → 约 230 行纯分派；业务拆进 `routes/public/` 与 `routes/admin/`
+- **服务端测试从 0 到 63**：内存 SQLite + 直接构造 `Request`，不起 HTTP
+
+### 服务端（新能力）
+- **橱窗** `/v1/gallery`：潮汐分栏 + `sort_key` 稳定随机排序 + 游标翻页；
+  DTO 不返回 `seed` / `sourceBottle` / 时间 / 任何计数
+- **新闻** `/v1/news`、`/v1/news/:id`、`/v1/news/pick`（每设备每天 ≤1 条）；
+  DTO 不返回 `sourceUrl`（前台不渲染成链接）
+- **`/news` 与 `/news/:id` 服务端渲染 HTML**（唯一需要 SEO 的页面，含 OG 标签）
+- **线索接收** `POST /v1/internal/news/leads`：独立 `NEWS_INGEST_TOKEN`，**没有任何自动发布路径**
+- **后台 API**：登录 / 登出 / me / 概览 / 审核 / 举报 / 橱窗 / 新闻 / 线索 / 开关 / 审计 / 账号 / 设备封禁
+- **认证**：TOTP（RFC 6238，WebCrypto，通过 RFC 官方向量）、`__Host-` 会话 Cookie、
+  **登录限流用 D1 原子自增**（KV 的读-改-写并发可被绕过）
+- **同源部署**：Node 侧 `static.ts` 提供静态资源（含路径穿越防护与 SPA 回退）；Worker 侧走 `assets` 绑定
+
+### 管理后台（`packages/admin`，Vite + React 19）
+8 个页面：概览 / 值班 / 橱窗 / 海的记录 / 线索 / 封海 / 审计 / 守塔人。
+- **概览先待办后数字**，只显示 3 个比率 + 种子占比，**刻意不显示 DAU / 停留时长 / PV**
+- 开关必须写理由；创建账号只展示一次 Key 与 TOTP 密钥
+- 打包 247 KB（gzip 77 KB），产物进 `server/public/admin`
+
+### 前台（`packages/web`）
+首页 / 看海 / 新闻 / 下载 / 隐私 / 协议。纯静态 + 原生 JS，**不引入框架**。
+- **静读模式**：全屏变暗、无任何互动按钮（无回复、无点赞），`history.replaceState` 不进历史
+- 橱窗 `noindex`；空海时诚实说「海面还很安静」，**不伪造数字**
+- 首页标题随访问时段变化（「此刻 · 深夜」）
+
+### 隐私红线做成机器门禁
+- `scripts/check-admin-privacy.js`：扫 `routes/admin/**`，禁止 `FROM bottles/replies/picks`，
+  且只允许 `findByIdForReport` 等白名单调用
+- **已验证能真实拦截**：造了一个 `SELECT * FROM bottles` 的探针，门禁拒绝并指出位置
+
+### 验证
+| 项 | 结果 |
+|---|---|
+| `npm test`（桌面 + 契约 + 服务端 + 5 道门禁） | 桌面 356 · 服务端 63 · 全绿 |
+| 平台端到端 `tests/e2e/platform.mjs`（真实 HTTP） | **30/30** |
+| TOTP | RFC 4226 / 6238 官方测试向量全过 |
+
+平台端到端覆盖：5 个前台页面 · 后台 SPA 及其 JS · 登录与 `__Host-` Cookie · 概览 ·
+投递→待审→批准→前台可见 · 新闻草稿→发布→SSR 页面→桌面端取一条 · 一天只取一条 ·
+封海开关即时生效 · 未登录 401 · 后台响应不含私池正文。
+
+> `platform.mjs` 会临时起一个 **8899 端口**的服务并建临时库，不碰开发数据。
+
 ## [0.9.9] — 回来时它认出你 · 它记得的事看得见 · 页边一句话（2026-11-26）
 
 

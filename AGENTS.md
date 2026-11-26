@@ -6,7 +6,7 @@
 
 ## 一、这是什么
 
-**桌面陪伴 · 团子猫** —— Windows 桌面 Electron 陪伴角色，当前 0.9.9（私人闭环 P1 → P1.5 → P2 已全通；
+**桌面陪伴 · 团子猫** —— Windows 桌面 Electron 陪伴角色，当前 0.10.0（私人闭环已全通 + 平台三套系统可运行；
 产品方向以 [`docs/PRODUCT-THESIS.md`](docs/PRODUCT-THESIS.md) 为准）。
 
 - 80×80 内联 SVG 团子猫常驻桌角：可拖拽、位置记忆、贴边自动翻转菜单
@@ -163,6 +163,8 @@ npm run release:patch     # 门禁全过 → 升版本 → tag → push → 双�
 - ✅ **P2「页边一句话」（0.9.9）**：`DiaryEntry.margin` 与日记隔离（猫重算不冲掉用户的话）；
   允许不回；`scripts/check-margin-privacy.js` 守住「不出网」
 - ✅ **记忆界面可见（0.9.9）**：设置里能看/能删「它记得的事」「今天记下的」
+- ✅ **平台可运行（0.10.0）**：服务端（迁移/橱窗/新闻/后台 API/同源静态）+ 管理后台 SPA + 前台站点；
+  服务端 63 单测、平台端到端 30/30、check-admin-privacy 门禁
 - ✅ **工程门禁（0.9.9）**：`check-secrets.js`（密钥）+ `check-margin-privacy.js`（页边不出网）进 `npm test`
 - **下一步：部署 S3**——在 `packages/server` 建 D1 / VPS + 填默认地址 + 邀请制冷启动
 - 产品侧下一步：按闸门验证 P2 的真实使用数据（打开者周留一句 ≥30%），再决定 S5 猫邮局

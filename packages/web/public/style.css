@@ -1,0 +1,162 @@
+/* 窗口与灯塔 · 前台样式
+   设计语言见 docs/WINDOW.md 第三节：海、窗口、灯塔。
+   低饱和、无强调色（除了下载按钮），像站在屋里看海。 */
+
+:root {
+  --paper: #fbf8f4;
+  --paper-2: #f4efe8;
+  --ink: #2c2621;
+  --ink-2: #6a6058;
+  --ink-3: #a49a90;
+  --line: rgba(44, 38, 33, 0.1);
+  --sea: #4a6f80;
+  --sea-soft: rgba(74, 111, 128, 0.08);
+  --gold: #c09348;
+  --shadow: 0 14px 40px rgba(84, 66, 48, 0.09);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background:
+    radial-gradient(ellipse at 50% -10%, #eef3f5 0%, transparent 55%),
+    var(--paper);
+  color: var(--ink);
+  font: 15px/1.85 "Georgia", "Songti SC", "Microsoft YaHei", serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+a { color: var(--sea); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.wrap { max-width: 720px; margin: 0 auto; padding: 48px 22px 80px; }
+
+/* ---------- 顶栏 ---------- */
+.top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 22px; max-width: 900px; margin: 0 auto;
+  font-size: 13px; color: var(--ink-2);
+}
+.top .mark { letter-spacing: 0.1em; color: var(--ink); }
+.top nav { display: flex; gap: 18px; }
+
+/* ---------- 标题区 ---------- */
+.kicker { font-size: 12px; letter-spacing: 0.18em; color: var(--ink-3); text-transform: uppercase; }
+h1 {
+  font-size: clamp(28px, 5vw, 40px); line-height: 1.35; font-weight: 500;
+  margin: 14px 0 18px; letter-spacing: 0.01em;
+}
+h1 em { font-style: normal; color: var(--sea); }
+.lead { font-size: 16px; color: var(--ink-2); max-width: 34em; }
+
+/* 下载：页面上唯一带颜色的东西 */
+.actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 28px 0 10px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: 999px; font-size: 14px;
+  border: 1px solid var(--line); background: var(--paper-2); color: var(--ink);
+  font-family: inherit; cursor: pointer;
+}
+.btn:hover { background: #efe8df; text-decoration: none; }
+.btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn.primary:hover { background: #40372f; }
+.btn.sm { padding: 6px 14px; font-size: 13px; }
+.btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ---------- 潮汐 ---------- */
+.tide { margin: 46px 0 0; }
+.tide-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+.tide-head h2 { font-size: 15px; font-weight: 500; color: var(--ink-2); }
+.tide-nav { display: flex; gap: 4px; }
+.tide-nav button {
+  border: none; background: none; color: var(--ink-3); font: inherit; font-size: 13px;
+  padding: 3px 9px; border-radius: 999px; cursor: pointer;
+}
+.tide-nav button.on { background: var(--sea-soft); color: var(--sea); }
+.tide-nav button:hover { color: var(--ink-2); }
+
+/* ---------- 瓶子卡 ---------- */
+.bottles { display: flex; flex-direction: column; gap: 10px; }
+.bottle {
+  display: block; text-align: left; width: 100%;
+  padding: 17px 19px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--line);
+  font: inherit; color: inherit; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.bottle:hover { background: #fff; border-color: rgba(74, 111, 128, 0.25); }
+.bottle .text { font-size: 15.5px; line-height: 1.8; overflow-wrap: anywhere; }
+.bottle .by { margin-top: 7px; font-size: 12px; color: var(--ink-3); }
+
+.empty {
+  text-align: center; color: var(--ink-3); padding: 46px 20px;
+  line-height: 2; font-size: 14px;
+}
+
+/* ---------- 静读模式 ---------- */
+.reader {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(20, 17, 14, 0.92);
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 22px;
+  opacity: 0; pointer-events: none; transition: opacity 0.22s;
+}
+.reader.open { opacity: 1; pointer-events: auto; }
+.reader .card {
+  max-width: 34em; width: 100%; color: #ece6df;
+  text-align: left;
+}
+.reader .text {
+  font-size: clamp(18px, 2.6vw, 23px); line-height: 2;
+  letter-spacing: 0.01em; overflow-wrap: anywhere;
+}
+.reader .by { margin-top: 26px; font-size: 13px; color: rgba(236, 230, 223, 0.45); }
+.reader .close {
+  position: absolute; top: 18px; right: 22px;
+  background: none; border: none; color: rgba(236, 230, 223, 0.5);
+  font-size: 22px; cursor: pointer; line-height: 1;
+}
+.reader .close:hover { color: #fff; }
+.reader .nav {
+  position: absolute; bottom: 22px; left: 0; right: 0;
+  display: flex; justify-content: center; gap: 26px;
+  font-size: 13px; color: rgba(236, 230, 223, 0.4);
+}
+.reader .nav button { background: none; border: none; color: inherit; font: inherit; cursor: pointer; }
+.reader .nav button:hover { color: #ece6df; }
+.reader .nav button:disabled { opacity: 0.3; cursor: default; }
+.reader .report { position: absolute; bottom: 22px; right: 22px; }
+.reader .report button {
+  background: none; border: none; color: rgba(236, 230, 223, 0.22);
+  font: inherit; font-size: 11.5px; cursor: pointer;
+}
+.reader .report button:hover { color: rgba(236, 230, 223, 0.7); }
+
+/* ---------- 新闻 ---------- */
+.news-item {
+  padding: 18px 0; border-bottom: 1px solid var(--line);
+}
+.news-item:last-child { border-bottom: none; }
+.news-item h3 { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+.news-item h3 a { color: var(--ink); }
+.news-item h3 a:hover { color: var(--sea); }
+.news-item .summary { color: var(--ink-2); font-size: 14px; }
+.news-item .src { font-size: 12px; color: var(--ink-3); margin-top: 5px; }
+.news-body { font-size: 16px; line-height: 2.05; white-space: pre-wrap; }
+
+/* ---------- 页脚 ---------- */
+.foot {
+  margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line);
+  font-size: 12px; color: var(--ink-3); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.foot a { color: var(--ink-3); }
+
+.status { font-size: 13px; color: var(--ink-3); text-align: center; padding: 28px 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bottle, .reader { transition: none; }
+}

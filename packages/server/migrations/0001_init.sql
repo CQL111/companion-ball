@@ -1,4 +1,4 @@
--- 许愿瓶：D1 表结构
+-- 0001_init - 许愿瓶基础表（原 schema.sql，内容不变）
 -- 见 docs/SERVER.md 第三节。修改这里时同步更新文档。
 
 CREATE TABLE IF NOT EXISTS bottles (

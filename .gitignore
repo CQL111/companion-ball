@@ -13,6 +13,9 @@
 /packages/desktop/release
 /packages/web/dist
 /packages/admin/dist
+# 平台构建产物（前台与后台汇编进这里，随服务端一起部署）
+/packages/server/public
+/packages/server/data
 dist
 /release
 /out

@@ -35,6 +35,18 @@ function readAll(dir: string): Array<{ name: string; src: string }> {
     .map((n) => ({ name: n, src: fs.readFileSync(path.join(dir, n), 'utf8') }))
 }
 
+/** 递归收集目录下的 .ts（服务端 0.10 起多了 routes/ repo/ 子目录） */
+function collectTs(dir: string): Array<{ name: string; src: string }> {
+  if (!fs.existsSync(dir)) return []
+  const out: Array<{ name: string; src: string }> = []
+  for (const name of fs.readdirSync(dir)) {
+    const p = path.join(dir, name)
+    if (fs.statSync(p).isDirectory()) out.push(...collectTs(p))
+    else if (name.endsWith('.ts')) out.push({ name: path.relative(SERVER_SRC, p), src: fs.readFileSync(p, 'utf8') })
+  }
+  return out
+}
+
 describe('契约唯一源', () => {
   it('关键常量与历史保持一致', () => {
     expect(BOTTLE_MAX_LENGTH).toBe(60)
@@ -55,9 +67,16 @@ describe('契约唯一源', () => {
 
   it('服务端不再存在手抄副本，业务从契约包引用', () => {
     expect(fs.existsSync(path.join(SERVER_SRC, 'rules.ts'))).toBe(false)
-    const handler = fs.readFileSync(path.join(SERVER_SRC, 'handler.ts'), 'utf8')
-    expect(handler).toContain("from '@companion/contracts'")
-    expect(handler).not.toMatch(/from '\.\/rules'/)
+    // 0.10 起 handler.ts 只做分派，业务在 routes/ 与 repo/ 里；
+    // 断言改为「整个服务端 src 里，瓶子规则都来自契约包」。
+    const files = collectTs(SERVER_SRC)
+    const users = files.filter(({ src }) =>
+      /checkText|poolFor|randomAlias|BOTTLE_MAX_LENGTH|REPLY_MAX_LENGTH/.test(src),
+    )
+    expect(users.length).toBeGreaterThan(0)
+    for (const { name, src } of users) {
+      expect(src, `${name} 应引用契约包`).toContain("from '@companion/contracts'")
+    }
   })
 
   it('服务端业务层不依赖任何平台类型（D1Database / node:）', () => {
@@ -66,6 +85,11 @@ describe('契约唯一源', () => {
     // 业务层必须平台无关：两个运行时（Workers / Node）共用它
     expect(handler, 'handler 不应出现 D1Database').not.toMatch(/D1Database/)
     expect(handler, 'handler 不应 import node:').not.toMatch(/from ['"]node:/)
+    // 0.10 起业务拆在 routes/ 与 repo/：它们同样必须平台无关
+    for (const { name, src } of collectTs(path.join(SERVER_SRC, 'routes'))) {
+      expect(src, `${name} 不应出现 D1Database`).not.toMatch(/D1Database/)
+      expect(src, `${name} 不应 import node:`).not.toMatch(/from ['"]node:/)
+    }
     // D1Database 只允许出现在适配器文件 db.ts 里
     expect(db).toMatch(/D1Database/)
   })
